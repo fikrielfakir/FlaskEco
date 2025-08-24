@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Contrôle Qualité - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-check-circle me-2"></i>Contrôle Qualité</h1>
+        <a href="{{ url_for('create_test') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Nouveau Test
+        </a>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Recherche par Lot</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Numéro de lot">
+                </div>
+                <div class="col-md-3">
+                    <label for="test_type" class="form-label">Type de Test</label>
+                    <select class="form-select" id="test_type" name="test_type">
+                        <option value="">Tous les types</option>
+                        <option value="dimensional" {% if test_type == 'dimensional' %}selected{% endif %}>Dimensionnel</option>
+                        <option value="water_absorption" {% if test_type == 'water_absorption' %}selected{% endif %}>Absorption d'eau</option>
+                        <option value="breaking_strength" {% if test_type == 'breaking_strength' %}selected{% endif %}>Résistance à la rupture</option>
+                        <option value="abrasion" {% if test_type == 'abrasion' %}selected{% endif %}>Résistance à l'abrasion</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-search me-1"></i>Filtrer
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Test Results -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Résultats des Tests</h5>
+        </div>
+        <div class="card-body">
+            {% if tests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Lot</th>
+                                <th>Type de Test</th>
+                                <th>Norme ISO</th>
+                                <th>Technicien</th>
+                                <th>Score</th>
+                                <th>Résultat</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test in tests %}
+                                <tr>
+                                    <td>{{ test.test_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('view_batch', batch_id=test.batch.id) }}" class="text-decoration-none">
+                                            {{ test.batch.lot_number }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ test.test_type }}</span>
+                                    </td>
+                                    <td>{{ test.iso_standard or '-' }}</td>
+                                    <td>{{ test.technician.username }}</td>
+                                    <td>
+                                        {% if test.compliance_score %}
+                                            {{ "%.1f"|format(test.compliance_score) }}%
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if test.result == 'pass' %}success{% else %}danger{% endif %}">
+                                            {{ test.result }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('view_test', test_id=test.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucun test de qualité trouvé. <a href="{{ url_for('create_test') }}">Créer le premier test</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

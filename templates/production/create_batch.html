@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Nouveau Lot de Production - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-plus me-2"></i>Nouveau Lot de Production</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="product_type" class="form-label">Type de Produit *</label>
+                                <select class="form-select" id="product_type" name="product_type" required>
+                                    <option value="">Sélectionner un type</option>
+                                    <option value="Carreaux Sol 30x30">Carreaux Sol 30x30</option>
+                                    <option value="Carreaux Sol 45x45">Carreaux Sol 45x45</option>
+                                    <option value="Carreaux Sol 60x60">Carreaux Sol 60x60</option>
+                                    <option value="Carreaux Mur 20x25">Carreaux Mur 20x25</option>
+                                    <option value="Carreaux Mur 25x40">Carreaux Mur 25x40</option>
+                                    <option value="Grès Cérame 30x30">Grès Cérame 30x30</option>
+                                    <option value="Grès Cérame 60x60">Grès Cérame 60x60</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="planned_quantity" class="form-label">Quantité Planifiée *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="planned_quantity" 
+                                           name="planned_quantity" min="1" required>
+                                    <span class="input-group-text">unités</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="production_date" class="form-label">Date de Production *</label>
+                                <input type="date" class="form-control" id="production_date" 
+                                       name="production_date" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="kiln_number" class="form-label">Numéro de Four *</label>
+                                <select class="form-select" id="kiln_number" name="kiln_number" required>
+                                    <option value="">Sélectionner un four</option>
+                                    <option value="FOUR-001">FOUR-001</option>
+                                    <option value="FOUR-002">FOUR-002</option>
+                                    <option value="FOUR-003">FOUR-003</option>
+                                    <option value="FOUR-004">FOUR-004</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="kiln_temperature" class="form-label">Température du Four</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="kiln_temperature" 
+                                           name="kiln_temperature" step="0.1" min="800" max="1400">
+                                    <span class="input-group-text">°C</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="firing_duration" class="form-label">Durée de Cuisson</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="firing_duration" 
+                                           name="firing_duration" step="0.1" min="0">
+                                    <span class="input-group-text">heures</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                      placeholder="Notes ou instructions spéciales"></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('production_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Créer le Lot
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set today's date as default
+document.getElementById('production_date').valueAsDate = new Date();
+</script>
+{% endblock %}

@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Déchets - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-recycle me-2"></i>Gestion des Déchets</h1>
+        <a href="{{ url_for('add_waste_record') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Ajouter Enregistrement
+        </a>
+    </div>
+    
+    <!-- Waste Summary Cards -->
+    <div class="row mb-4">
+        {% set total_liquid = records|selectattr('waste_type', 'equalto', 'liquid')|map(attribute='quantity_kg')|sum %}
+        {% set total_solid = records|selectattr('waste_type', 'equalto', 'solid')|map(attribute='quantity_kg')|sum %}
+        {% set recycled_liquid = records|selectattr('waste_type', 'equalto', 'liquid')|selectattr('disposal_method', 'equalto', 'recycled')|map(attribute='quantity_kg')|sum %}
+        {% set recycled_solid = records|selectattr('waste_type', 'equalto', 'solid')|selectattr('disposal_method', 'in', ['recycled', 'reused'])|map(attribute='quantity_kg')|sum %}
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Déchets Liquides</h6>
+                            <h4>{{ "%.1f"|format(total_liquid) }} kg</h4>
+                        </div>
+                        <div>
+                            <i class="fas fa-tint fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Déchets Solides</h6>
+                            <h4>{{ "%.1f"|format(total_solid) }} kg</h4>
+                        </div>
+                        <div>
+                            <i class="fas fa-cube fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Recyclage Liquides</h6>
+                            <h4>
+                                {% if total_liquid > 0 %}
+                                    {{ "%.0f"|format((recycled_liquid / total_liquid) * 100) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </h4>
+                            <small>Objectif: 100%</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-recycle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Valorisation Solides</h6>
+                            <h4>
+                                {% if total_solid > 0 %}
+                                    {{ "%.0f"|format((recycled_solid / total_solid) * 100) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </h4>
+                            <small>Objectif: 100%</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-leaf fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Waste Records -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Enregistrements de Déchets</h5>
+        </div>
+        <div class="card-body">
+            {% if records %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Catégorie</th>
+                                <th>Quantité</th>
+                                <th>Méthode</th>
+                                <th>Recyclage</th>
+                                <th>Impact</th>
+                                <th>Enregistré par</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                                <tr>
+                                    <td>{{ record.date.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if record.waste_type == 'liquid' %}primary{% else %}warning{% endif %}">
+                                            <i class="fas fa-{% if record.waste_type == 'liquid' %}tint{% else %}cube{% endif %} me-1"></i>
+                                            {{ record.waste_type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ record.category }}</td>
+                                    <td>{{ "%.1f"|format(record.quantity_kg) }} kg</td>
+                                    <td>
+                                        <span class="badge bg-{% if record.disposal_method == 'recycled' or record.disposal_method == 'reused' %}success{% else %}secondary{% endif %}">
+                                            {{ record.disposal_method }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if record.recycling_percentage > 0 %}
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-success" 
+                                                     style="width: {{ record.recycling_percentage }}%">
+                                                    {{ "%.0f"|format(record.recycling_percentage) }}%
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.environmental_impact %}
+                                            <i class="fas fa-leaf text-success" title="{{ record.environmental_impact }}"></i>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.recorded_by.username }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucun enregistrement de déchets. <a href="{{ url_for('add_waste_record') }}">Ajouter le premier enregistrement</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

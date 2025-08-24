@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section bg-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">EcoQuality</h1>
+                <h2 class="h3 mb-4">Système de Gestion Qualité Céramique</h2>
+                <p class="lead mb-4">
+                    Solution complète de contrôle qualité pour la fabrication de carreaux céramiques.
+                    Conformité ISO, suivi de production, et monitoring environnemental.
+                </p>
+                <a href="{{ url_for('login') }}" class="btn btn-light btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Se Connecter
+                </a>
+            </div>
+            <div class="col-lg-6">
+                <div class="text-center">
+                    <i class="fas fa-industry display-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Gestion de Production</h5>
+                    <p class="card-text">
+                        Suivi des lots de production, contrôle des fours, et monitoring des quantités.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Contrôle Qualité</h5>
+                    <p class="card-text">
+                        Tests conformes ISO 13006, mesures dimensionnelles, résistance et absorption.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-leaf fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title">Durabilité</h5>
+                    <p class="card-text">
+                        Monitoring énergétique, gestion des déchets, et objectifs environnementaux.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-5">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-award me-2"></i>Conformité ISO</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>ISO 13006 - Classification céramique</li>
+                                <li><i class="fas fa-check text-success me-2"></i>ISO 10545-3 - Absorption d'eau</li>
+                                <li><i class="fas fa-check text-success me-2"></i>ISO 10545-4 - Résistance à la rupture</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>ISO 10545-7 - Résistance à l'abrasion</li>
+                                <li><i class="fas fa-check text-success me-2"></i>NM 10.1.008 - Standards marocains</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Traçabilité complète</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

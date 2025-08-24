@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter Enregistrement de Déchets - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-recycle me-2"></i>Ajouter Enregistrement de Déchets</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="date" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="date" name="date" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="waste_type" class="form-label">Type de Déchet *</label>
+                                <select class="form-select" id="waste_type" name="waste_type" required>
+                                    <option value="">Sélectionner un type</option>
+                                    <option value="liquid">Déchets Liquides</option>
+                                    <option value="solid">Déchets Solides</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="category" class="form-label">Catégorie *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Sélectionner une catégorie</option>
+                                    <optgroup label="Déchets Liquides">
+                                        <option value="Eau de process">Eau de process</option>
+                                        <option value="Eau de refroidissement">Eau de refroidissement</option>
+                                        <option value="Eaux usées">Eaux usées</option>
+                                        <option value="Huiles usagées">Huiles usagées</option>
+                                    </optgroup>
+                                    <optgroup label="Déchets Solides">
+                                        <option value="Rebuts céramiques">Rebuts céramiques</option>
+                                        <option value="Poussières">Poussières</option>
+                                        <option value="Emballages">Emballages</option>
+                                        <option value="Métaux">Métaux</option>
+                                        <option value="Matériaux organiques">Matériaux organiques</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="quantity_kg" class="form-label">Quantité *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="quantity_kg" 
+                                           name="quantity_kg" step="0.1" min="0" required>
+                                    <span class="input-group-text">kg</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="disposal_method" class="form-label">Méthode de Traitement *</label>
+                                <select class="form-select" id="disposal_method" name="disposal_method" required>
+                                    <option value="">Sélectionner une méthode</option>
+                                    <option value="recycled">Recyclé</option>
+                                    <option value="reused">Réutilisé</option>
+                                    <option value="disposed">Éliminé</option>
+                                    <option value="incinerated">Incinéré</option>
+                                    <option value="composted">Composté</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="recycling_percentage" class="form-label">Pourcentage de Recyclage</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="recycling_percentage" 
+                                           name="recycling_percentage" step="0.1" min="0" max="100" value="0">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="form-text">
+                                    Objectifs: 100% liquides recyclés, 100% solides valorisés
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="environmental_impact" class="form-label">Impact Environnemental</label>
+                            <textarea class="form-control" id="environmental_impact" name="environmental_impact" rows="3" 
+                                      placeholder="Description de l'impact environnemental et des mesures prises"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                      placeholder="Notes additionnelles, procédures spéciales, observations"></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('waste_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set today's date as default
+document.getElementById('date').valueAsDate = new Date();
+
+// Update recycling percentage based on disposal method
+document.getElementById('disposal_method').addEventListener('change', function() {
+    const method = this.value;
+    const recyclingInput = document.getElementById('recycling_percentage');
+    
+    if (method === 'recycled' || method === 'reused') {
+        recyclingInput.value = 100;
+    } else if (method === 'disposed' || method === 'incinerated') {
+        recyclingInput.value = 0;
+    }
+});
+</script>
+{% endblock %}

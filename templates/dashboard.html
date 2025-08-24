@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de Bord - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-tachometer-alt me-2"></i>Tableau de Bord</h1>
+        <span class="badge bg-primary">{{ current_user.role }}</span>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Lots Total</h5>
+                            <h2>{{ total_batches }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-boxes fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">En Cours</h5>
+                            <h2>{{ pending_batches }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Tests Réussis</h5>
+                            <h2>{{ completed_tests }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Tests Échoués</h5>
+                            <h2>{{ failed_tests }}</h2>
+                        </div>
+                        <div>
+                            <i class="fas fa-times-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Actions Rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2 mb-2">
+                            <a href="{{ url_for('create_batch') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-plus me-1"></i>Nouveau Lot
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <a href="{{ url_for('create_test') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-vial me-1"></i>Test Qualité
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <a href="{{ url_for('add_energy_consumption') }}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-bolt me-1"></i>Énergie
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <a href="{{ url_for('add_waste_record') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-recycle me-1"></i>Déchets
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <a href="{{ url_for('add_material') }}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-cubes me-1"></i>Matières
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Lots Récents</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_batches %}
+                        <div class="list-group list-group-flush">
+                            {% for batch in recent_batches %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ batch.lot_number }}</strong><br>
+                                        <small class="text-muted">{{ batch.product_type }}</small>
+                                    </div>
+                                    <span class="badge bg-{% if batch.status == 'completed' %}success{% elif batch.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                                        {{ batch.status }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun lot récent</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-vial me-2"></i>Tests Récents</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_tests %}
+                        <div class="list-group list-group-flush">
+                            {% for test in recent_tests %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ test.test_type }}</strong><br>
+                                        <small class="text-muted">Lot: {{ test.batch.lot_number }}</small>
+                                    </div>
+                                    <span class="badge bg-{% if test.result == 'pass' %}success{% else %}danger{% endif %}">
+                                        {{ test.result }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun test récent</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

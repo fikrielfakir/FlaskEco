@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter Matière Première - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-cubes me-2"></i>Ajouter Matière Première</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Nom de la Matière *</label>
+                                <input type="text" class="form-control" id="name" name="name" required
+                                       placeholder="Ex: Argile blanche, Kaolin, Feldspath">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="supplier" class="form-label">Fournisseur *</label>
+                                <input type="text" class="form-control" id="supplier" name="supplier" required
+                                       placeholder="Nom du fournisseur">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="category" class="form-label">Catégorie *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Sélectionner une catégorie</option>
+                                    <option value="Argiles">Argiles</option>
+                                    <option value="Feldspaths">Feldspaths</option>
+                                    <option value="Quartz">Quartz</option>
+                                    <option value="Kaolin">Kaolin</option>
+                                    <option value="Chamotte">Chamotte</option>
+                                    <option value="Émaux">Émaux</option>
+                                    <option value="Colorants">Colorants</option>
+                                    <option value="Additifs">Additifs</option>
+                                    <option value="Combustibles">Combustibles</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="quantity_kg" class="form-label">Quantité *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="quantity_kg" 
+                                           name="quantity_kg" step="0.1" min="0" required>
+                                    <span class="input-group-text">kg</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="unit_cost" class="form-label">Coût Unitaire</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="unit_cost" 
+                                           name="unit_cost" step="0.01" min="0">
+                                    <span class="input-group-text">MAD/kg</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="quality_grade" class="form-label">Grade de Qualité</label>
+                                <select class="form-select" id="quality_grade" name="quality_grade">
+                                    <option value="">Sélectionner un grade</option>
+                                    <option value="A+">A+ - Qualité supérieure</option>
+                                    <option value="A">A - Qualité standard</option>
+                                    <option value="B">B - Qualité économique</option>
+                                    <option value="Industriel">Industriel</option>
+                                    <option value="Technique">Technique</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="date_received" class="form-label">Date de Réception *</label>
+                                <input type="date" class="form-control" id="date_received" name="date_received" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="expiry_date" class="form-label">Date d'Expiration</label>
+                                <input type="date" class="form-control" id="expiry_date" name="expiry_date">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="lot_number" class="form-label">Numéro de Lot</label>
+                                <input type="text" class="form-control" id="lot_number" name="lot_number"
+                                       placeholder="Numéro de lot fournisseur">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="quality_certified" name="quality_certified">
+                                    <label class="form-check-label" for="quality_certified">
+                                        <i class="fas fa-certificate me-1"></i>Qualité Certifiée
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="specifications" class="form-label">Spécifications Techniques</label>
+                            <textarea class="form-control" id="specifications" name="specifications" rows="4" 
+                                      placeholder="Composition chimique, propriétés physiques, normes de qualité, etc."></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('materials_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Ajouter Matière
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set today's date as default
+document.getElementById('date_received').valueAsDate = new Date();
+
+// Auto-generate lot number suggestion
+document.getElementById('name').addEventListener('blur', function() {
+    const name = this.value;
+    const lotInput = document.getElementById('lot_number');
+    
+    if (name && !lotInput.value) {
+        const date = new Date();
+        const prefix = name.substring(0, 3).toUpperCase();
+        const dateSuffix = date.getFullYear().toString() + (date.getMonth() + 1).toString().padStart(2, '0');
+        lotInput.value = prefix + '-' + dateSuffix + '-001';
+    }
+});
+</script>
+{% endblock %}

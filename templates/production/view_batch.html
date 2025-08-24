@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Lot {{ batch.lot_number }} - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-box me-2"></i>Lot {{ batch.lot_number }}</h1>
+        <div>
+            <a href="{{ url_for('production_index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Retour
+            </a>
+            {% if batch.status == 'completed' %}
+                <a href="{{ url_for('create_test') }}?batch_id={{ batch.id }}" class="btn btn-success">
+                    <i class="fas fa-vial me-1"></i>Créer Test
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Batch Details -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Détails du Lot</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Numéro de Lot:</strong> {{ batch.lot_number }}</p>
+                            <p><strong>Type de Produit:</strong> {{ batch.product_type }}</p>
+                            <p><strong>Date de Production:</strong> {{ batch.production_date.strftime('%d/%m/%Y') }}</p>
+                            <p><strong>Four:</strong> {{ batch.kiln_number }}</p>
+                            {% if batch.supervisor %}
+                                <p><strong>Superviseur:</strong> {{ batch.supervisor.username }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Quantité Planifiée:</strong> {{ batch.planned_quantity }} unités</p>
+                            <p><strong>Quantité Réelle:</strong> {{ batch.actual_quantity or 0 }} unités</p>
+                            {% if batch.kiln_temperature %}
+                                <p><strong>Température:</strong> {{ batch.kiln_temperature }}°C</p>
+                            {% endif %}
+                            {% if batch.firing_duration %}
+                                <p><strong>Durée de Cuisson:</strong> {{ batch.firing_duration }} heures</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if batch.notes %}
+                        <div class="mt-3">
+                            <strong>Notes:</strong>
+                            <p class="text-muted">{{ batch.notes }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quality Tests -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-vial me-2"></i>Tests de Qualité</h5>
+                </div>
+                <div class="card-body">
+                    {% if batch.quality_tests %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Type de Test</th>
+                                        <th>Date</th>
+                                        <th>Technicien</th>
+                                        <th>Résultat</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for test in batch.quality_tests %}
+                                        <tr>
+                                            <td>{{ test.test_type }}</td>
+                                            <td>{{ test.test_date.strftime('%d/%m/%Y') }}</td>
+                                            <td>{{ test.technician.username }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if test.result == 'pass' %}success{% else %}danger{% endif %}">
+                                                    {{ test.result }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('view_test', test_id=test.id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun test de qualité effectué pour ce lot.</p>
+                        {% if batch.status == 'completed' %}
+                            <div class="text-center">
+                                <a href="{{ url_for('create_test') }}?batch_id={{ batch.id }}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Créer Premier Test
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Status Management -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Gestion du Statut</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Statut Actuel</label>
+                        <div>
+                            <span class="badge bg-{% if batch.status == 'approved' %}success{% elif batch.status == 'completed' %}info{% elif batch.status == 'in_progress' %}warning{% elif batch.status == 'rejected' %}danger{% else %}secondary{% endif %} fs-6">
+                                {{ batch.status }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('update_batch_status') }}">
+                        <input type="hidden" name="batch_id" value="{{ batch.id }}">
+                        
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Nouveau Statut</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="planned" {% if batch.status == 'planned' %}selected{% endif %}>Planifié</option>
+                                <option value="in_progress" {% if batch.status == 'in_progress' %}selected{% endif %}>En cours</option>
+                                <option value="completed" {% if batch.status == 'completed' %}selected{% endif %}>Terminé</option>
+                                <option value="approved" {% if batch.status == 'approved' %}selected{% endif %}>Approuvé</option>
+                                <option value="rejected" {% if batch.status == 'rejected' %}selected{% endif %}>Rejeté</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="actual_quantity" class="form-label">Quantité Réelle</label>
+                            <input type="number" class="form-control" id="actual_quantity" 
+                                   name="actual_quantity" value="{{ batch.actual_quantity or '' }}" min="0">
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Mettre à Jour
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Timeline -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Chronologie</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <i class="fas fa-plus-circle text-primary"></i>
+                            <div class="timeline-content">
+                                <strong>Lot Créé</strong><br>
+                                <small class="text-muted">{{ batch.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        
+                        {% if batch.updated_at != batch.created_at %}
+                            <div class="timeline-item">
+                                <i class="fas fa-edit text-info"></i>
+                                <div class="timeline-content">
+                                    <strong>Dernière Mise à Jour</strong><br>
+                                    <small class="text-muted">{{ batch.updated_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

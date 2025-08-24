@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Matières Premières - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-cubes me-2"></i>Matières Premières</h1>
+        <a href="{{ url_for('add_material') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Ajouter Matière
+        </a>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Recherche</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Nom de matière ou fournisseur">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-search me-1"></i>Rechercher
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Materials Inventory -->
+    <div class="row">
+        {% for material in materials %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>{{ material.name }}</strong>
+                        {% if material.quality_certified %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle me-1"></i>Certifié
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-clock me-1"></i>En attente
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <strong>Fournisseur:</strong> {{ material.supplier }}<br>
+                            <strong>Catégorie:</strong> {{ material.category }}<br>
+                            <strong>Quantité:</strong> {{ "%.1f"|format(material.quantity_kg) }} kg<br>
+                            <strong>Grade:</strong> {{ material.quality_grade or 'Non spécifié' }}<br>
+                            <strong>Reçu le:</strong> {{ material.date_received.strftime('%d/%m/%Y') }}
+                        </p>
+                        
+                        {% if material.unit_cost %}
+                            <p class="text-muted">
+                                <small>Coût unitaire: {{ "%.2f"|format(material.unit_cost) }} MAD/kg</small>
+                            </p>
+                        {% endif %}
+                        
+                        {% if material.expiry_date %}
+                            {% set days_to_expiry = (material.expiry_date - today).days %}
+                            <div class="mt-2">
+                                <small class="{% if days_to_expiry <= 30 %}text-danger{% elif days_to_expiry <= 60 %}text-warning{% else %}text-muted{% endif %}">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Expire le: {{ material.expiry_date.strftime('%d/%m/%Y') }}
+                                    {% if days_to_expiry <= 0 %}
+                                        <span class="badge bg-danger ms-1">EXPIRÉ</span>
+                                    {% elif days_to_expiry <= 30 %}
+                                        <span class="badge bg-warning ms-1">{{ days_to_expiry }}j restants</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        {% if material.lot_number %}
+                            <small class="text-muted">Lot: {{ material.lot_number }}</small>
+                        {% endif %}
+                        <br>
+                        <small class="text-muted">
+                            Ajouté par {{ material.recorded_by.username }} le {{ material.created_at.strftime('%d/%m/%Y') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucune matière première trouvée. <a href="{{ url_for('add_material') }}">Ajouter la première matière</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Summary Statistics -->
+    {% if materials %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistiques Inventaire</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <h4 class="text-primary">{{ materials|length }}</h4>
+                                <small class="text-muted">Types de Matières</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h4 class="text-success">{{ materials|selectattr('quality_certified')|list|length }}</h4>
+                                <small class="text-muted">Matières Certifiées</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                {% set total_quantity = materials|map(attribute='quantity_kg')|sum %}
+                                <h4 class="text-info">{{ "%.0f"|format(total_quantity) }} kg</h4>
+                                <small class="text-muted">Quantité Totale</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                {% set total_value = materials|map(attribute='unit_cost')|select|sum %}
+                                <h4 class="text-warning">{{ "%.2f"|format(total_value) }}</h4>
+                                <small class="text-muted">Valeur Totale (MAD)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Monitoring Énergétique - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-bolt me-2"></i>Monitoring Énergétique</h1>
+        <a href="{{ url_for('add_energy_consumption') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Ajouter Consommation
+        </a>
+    </div>
+    
+    <!-- Energy Summary Cards -->
+    <div class="row mb-4">
+        {% set total_electricity = records|selectattr('energy_source', 'equalto', 'electricity')|map(attribute='consumption_kwh')|sum %}
+        {% set total_gas = records|selectattr('energy_source', 'equalto', 'gas')|map(attribute='consumption_kwh')|sum %}
+        {% set total_solar = records|selectattr('energy_source', 'equalto', 'solar')|map(attribute='consumption_kwh')|sum %}
+        {% set total_heat_recovery = records|map(attribute='heat_recovery_kwh')|sum %}
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Électricité</h6>
+                            <h4>{{ "%.1f"|format(total_electricity) }} kWh</h4>
+                        </div>
+                        <div>
+                            <i class="fas fa-plug fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Gaz</h6>
+                            <h4>{{ "%.1f"|format(total_gas) }} kWh</h4>
+                        </div>
+                        <div>
+                            <i class="fas fa-fire fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Solaire</h6>
+                            <h4>{{ "%.1f"|format(total_solar) }} kWh</h4>
+                        </div>
+                        <div>
+                            <i class="fas fa-sun fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Récupération</h6>
+                            <h4>{{ "%.1f"|format(total_heat_recovery) }} kWh</h4>
+                            <small>Objectif: 511 MWh/an</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-recycle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Energy Records -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Enregistrements de Consommation</h5>
+        </div>
+        <div class="card-body">
+            {% if records %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Source</th>
+                                <th>Consommation</th>
+                                <th>Coût</th>
+                                <th>Four</th>
+                                <th>Efficacité</th>
+                                <th>Récupération</th>
+                                <th>Enregistré par</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                                <tr>
+                                    <td>{{ record.date.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if record.energy_source == 'electricity' %}primary{% elif record.energy_source == 'gas' %}warning{% else %}success{% endif %}">
+                                            <i class="fas fa-{% if record.energy_source == 'electricity' %}plug{% elif record.energy_source == 'gas' %}fire{% else %}sun{% endif %} me-1"></i>
+                                            {{ record.energy_source }}
+                                        </span>
+                                    </td>
+                                    <td>{{ "%.1f"|format(record.consumption_kwh) }} kWh</td>
+                                    <td>
+                                        {% if record.cost %}
+                                            {{ "%.2f"|format(record.cost) }} MAD
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.kiln_number or '-' }}</td>
+                                    <td>
+                                        {% if record.efficiency_rating %}
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-{% if record.efficiency_rating >= 80 %}success{% elif record.efficiency_rating >= 60 %}warning{% else %}danger{% endif %}" 
+                                                     style="width: {{ record.efficiency_rating }}%">
+                                                    {{ "%.0f"|format(record.efficiency_rating) }}%
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.heat_recovery_kwh > 0 %}
+                                            <span class="text-success">{{ "%.1f"|format(record.heat_recovery_kwh) }} kWh</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.recorded_by.username }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucun enregistrement de consommation énergétique. <a href="{{ url_for('add_energy_consumption') }}">Ajouter le premier enregistrement</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

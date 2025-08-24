@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Test {{ test.test_type }} - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-vial me-2"></i>Test de Qualité</h1>
+        <div>
+            <a href="{{ url_for('quality_index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Retour
+            </a>
+            <a href="{{ url_for('view_batch', batch_id=test.batch.id) }}" class="btn btn-outline-primary">
+                <i class="fas fa-box me-1"></i>Voir le Lot
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Test Details -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Détails du Test</h5>
+                    <span class="badge bg-{% if test.result == 'pass' %}success{% else %}danger{% endif %} fs-6">
+                        {{ test.result }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Type de Test:</strong> {{ test.test_type }}</p>
+                            <p><strong>Norme ISO:</strong> {{ test.iso_standard }}</p>
+                            <p><strong>Date du Test:</strong> {{ test.test_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <p><strong>Technicien:</strong> {{ test.technician.username }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Lot Testé:</strong> 
+                                <a href="{{ url_for('view_batch', batch_id=test.batch.id) }}">{{ test.batch.lot_number }}</a>
+                            </p>
+                            <p><strong>Produit:</strong> {{ test.batch.product_type }}</p>
+                            {% if test.compliance_score %}
+                                <p><strong>Score de Conformité:</strong> {{ "%.1f"|format(test.compliance_score) }}%</p>
+                            {% endif %}
+                            {% if test.equipment_calibration_date %}
+                                <p><strong>Calibration Équipement:</strong> {{ test.equipment_calibration_date.strftime('%d/%m/%Y') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Test Measurements -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-ruler me-2"></i>Mesures et Résultats</h5>
+                </div>
+                <div class="card-body">
+                    {% if test.test_type == 'dimensional' %}
+                        <h6 class="text-primary">Mesures Dimensionnelles</h6>
+                        <div class="row">
+                            {% if test.length %}
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ test.length }} mm</strong><br>
+                                        <small class="text-muted">Longueur</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if test.width %}
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ test.width }} mm</strong><br>
+                                        <small class="text-muted">Largeur</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if test.thickness %}
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ test.thickness }} mm</strong><br>
+                                        <small class="text-muted">Épaisseur</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% if test.warping %}
+                                <div class="col-md-3">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ test.warping }} mm</strong><br>
+                                        <small class="text-muted">Gauchissement</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% elif test.test_type == 'water_absorption' %}
+                        <h6 class="text-primary">Absorption d'Eau</h6>
+                        {% if test.water_absorption %}
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ test.water_absorption }}%</strong><br>
+                                        <small class="text-muted">Absorption d'Eau</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% elif test.test_type == 'breaking_strength' %}
+                        <h6 class="text-primary">Résistance à la Rupture</h6>
+                        {% if test.breaking_strength %}
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ test.breaking_strength }} N</strong><br>
+                                        <small class="text-muted">Force de Rupture</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% elif test.test_type == 'abrasion' %}
+                        <h6 class="text-primary">Résistance à l'Abrasion</h6>
+                        {% if test.abrasion_resistance %}
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ test.abrasion_resistance }}</strong><br>
+                                        <small class="text-muted">Classe PEI</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if test.visual_defects %}
+                        <div class="mt-4">
+                            <h6 class="text-primary">Défauts Visuels</h6>
+                            <div class="border rounded p-3">
+                                {{ test.visual_defects }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            {% if test.notes %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Notes et Observations</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">{{ test.notes }}</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- ISO Compliance -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-award me-2"></i>Conformité ISO</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="compliance-circle {% if test.result == 'pass' %}bg-success{% else %}bg-danger{% endif %} text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            {% if test.compliance_score %}
+                                <strong>{{ "%.0f"|format(test.compliance_score) }}%</strong>
+                            {% else %}
+                                <i class="fas fa-{% if test.result == 'pass' %}check{% else %}times{% endif %} fa-2x"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <h6 class="{% if test.result == 'pass' %}text-success{% else %}text-danger{% endif %}">
+                            {% if test.result == 'pass' %}
+                                <i class="fas fa-check-circle me-1"></i>CONFORME
+                            {% else %}
+                                <i class="fas fa-times-circle me-1"></i>NON CONFORME
+                            {% endif %}
+                        </h6>
+                        <p class="small text-muted">Norme: {{ test.iso_standard }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Related Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-link me-2"></i>Informations Liées</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Lot de Production</strong><br>
+                        <a href="{{ url_for('view_batch', batch_id=test.batch.id) }}" class="text-decoration-none">
+                            {{ test.batch.lot_number }}
+                        </a><br>
+                        <small class="text-muted">{{ test.batch.product_type }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Statut du Lot</strong><br>
+                        <span class="badge bg-{% if test.batch.status == 'approved' %}success{% elif test.batch.status == 'completed' %}info{% elif test.batch.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                            {{ test.batch.status }}
+                        </span>
+                    </div>
+                    
+                    {% if test.batch.supervisor %}
+                        <div class="mb-3">
+                            <strong>Superviseur</strong><br>
+                            {{ test.batch.supervisor.username }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <strong>Quantité Testée</strong><br>
+                        {{ test.batch.actual_quantity or test.batch.planned_quantity }} unités
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

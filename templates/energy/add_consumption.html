@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Ajouter Consommation Énergétique - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-bolt me-2"></i>Ajouter Consommation Énergétique</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="date" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="date" name="date" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="energy_source" class="form-label">Source d'Énergie *</label>
+                                <select class="form-select" id="energy_source" name="energy_source" required>
+                                    <option value="">Sélectionner une source</option>
+                                    <option value="electricity">Électricité</option>
+                                    <option value="gas">Gaz</option>
+                                    <option value="solar">Solaire</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="consumption_kwh" class="form-label">Consommation *</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="consumption_kwh" 
+                                           name="consumption_kwh" step="0.1" min="0" required>
+                                    <span class="input-group-text">kWh</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="cost" class="form-label">Coût</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="cost" 
+                                           name="cost" step="0.01" min="0">
+                                    <span class="input-group-text">MAD</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="kiln_number" class="form-label">Numéro de Four</label>
+                                <select class="form-select" id="kiln_number" name="kiln_number">
+                                    <option value="">Sélectionner un four</option>
+                                    <option value="FOUR-001">FOUR-001</option>
+                                    <option value="FOUR-002">FOUR-002</option>
+                                    <option value="FOUR-003">FOUR-003</option>
+                                    <option value="FOUR-004">FOUR-004</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="efficiency_rating" class="form-label">Efficacité</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="efficiency_rating" 
+                                           name="efficiency_rating" step="0.1" min="0" max="100">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="heat_recovery_kwh" class="form-label">Récupération de Chaleur</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="heat_recovery_kwh" 
+                                           name="heat_recovery_kwh" step="0.1" min="0" value="0">
+                                    <span class="input-group-text">kWh</span>
+                                </div>
+                                <div class="form-text">Objectif annuel: 511 MWh</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                      placeholder="Notes sur la consommation, conditions particulières, etc."></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('energy_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set today's date as default
+document.getElementById('date').valueAsDate = new Date();
+</script>
+{% endblock %}
