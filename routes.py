@@ -622,7 +622,7 @@ def delete_iso_standard(standard_id):
 @app.route('/config/iso-standards/init-defaults', methods=['POST'])
 @login_required
 def init_default_iso_standards():
-    """Initialize database with default ISO standards"""
+    """Initialize database with default ISO standards from laboratory documents"""
     
     # Check if standards already exist
     existing_count = ISOStandard.query.count()
@@ -630,92 +630,184 @@ def init_default_iso_standards():
         flash('Des normes ISO existent déjà dans le système.', 'info')
         return redirect(url_for('iso_standards_index'))
     
-    # Create default ISO standards
+    # Create comprehensive ISO standards based on laboratory documents
     default_standards = [
-        # Dimensional standards
+        # Normes dimensionnelles selon ISO 10545-2
         ISOStandard(
-            standard_code='ISO 13006',
-            title='Classification des carreaux céramiques - Longueur',
+            standard_code='ISO 10545-2',
+            title='Tolérances dimensionnelles - Longueur ±0.5%',
             category='length',
             test_type='dimensional',
-            min_threshold=295.0,
-            max_threshold=305.0,
-            unit='mm',
-            description='Tolérance dimensionnelle pour longueur de carreaux 30x30cm (±5mm)'
+            min_threshold=None,  # Will be calculated as ±0.5% of nominal dimension
+            max_threshold=None,  # Will be calculated as ±0.5% of nominal dimension
+            unit='%',
+            description='Tolérance dimensionnelle pour longueur selon ISO 10545-2: ±0.5%'
         ),
         ISOStandard(
-            standard_code='ISO 13006',
-            title='Classification des carreaux céramiques - Largeur',
+            standard_code='ISO 10545-2',
+            title='Tolérances dimensionnelles - Largeur ±0.5%',
             category='width',
             test_type='dimensional',
-            min_threshold=295.0,
-            max_threshold=305.0,
-            unit='mm',
-            description='Tolérance dimensionnelle pour largeur de carreaux 30x30cm (±5mm)'
+            min_threshold=None,
+            max_threshold=None,
+            unit='%',
+            description='Tolérance dimensionnelle pour largeur selon ISO 10545-2: ±0.5%'
         ),
         ISOStandard(
-            standard_code='ISO 13006',
-            title='Classification des carreaux céramiques - Épaisseur',
+            standard_code='ISO 10545-2',
+            title='Tolérances dimensionnelles - Épaisseur ±1.5mm',
             category='thickness',
             test_type='dimensional',
-            min_threshold=7.0,
-            max_threshold=13.0,
+            min_threshold=-1.5,
+            max_threshold=1.5,
             unit='mm',
-            description='Tolérance épaisseur pour carreaux céramiques (7-13mm)'
+            description='Tolérance épaisseur selon ISO 10545-2: ±1.5mm'
         ),
         ISOStandard(
-            standard_code='ISO 13006',
-            title='Classification des carreaux céramiques - Gauchissement',
+            standard_code='ISO 10545-2',
+            title='Rectitude des arêtes - ±2mm',
             category='warping',
             test_type='dimensional',
             min_threshold=None,
             max_threshold=2.0,
             unit='mm',
-            description='Gauchissement maximal autorisé (≤2mm)'
+            description='Rectitude des arêtes selon ISO 10545-2: ±2mm maximum'
         ),
         
-        # Water absorption standards
+        # Normes d'absorption d'eau selon NM ISO 13006
         ISOStandard(
-            standard_code='ISO 10545-3',
-            title='Absorption d\'eau - Groupe BIa (Grès cérame)',
+            standard_code='NM ISO 13006',
+            title='Absorption d\'eau - Groupe BIa (E ≤ 0.5%)',
             category='water_absorption',
             test_type='water_absorption',
             min_threshold=None,
             max_threshold=0.5,
             unit='%',
-            description='Absorption d\'eau pour carreaux grès cérame BIa (≤0.5%)'
+            description='Absorption d\'eau pour carreaux grès cérame BIa: E ≤ 0.5%'
         ),
         ISOStandard(
-            standard_code='ISO 10545-3',
-            title='Absorption d\'eau - Groupe BIb',
+            standard_code='NM ISO 13006',
+            title='Absorption d\'eau - Groupe BIb (0.5% < E ≤ 3%)',
             category='water_absorption',
             test_type='water_absorption',
             min_threshold=0.5,
             max_threshold=3.0,
             unit='%',
-            description='Absorption d\'eau pour carreaux grès BIb (0.5-3%)'
+            description='Absorption d\'eau pour carreaux grès BIb: 0.5% < E ≤ 3%'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Absorption d\'eau - Groupe BIIa (3% < E ≤ 6%)',
+            category='water_absorption',
+            test_type='water_absorption',
+            min_threshold=3.0,
+            max_threshold=6.0,
+            unit='%',
+            description='Absorption d\'eau pour carreaux faïence BIIa: 3% < E ≤ 6%'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Absorption d\'eau - Groupe BIIb (6% < E ≤ 10%)',
+            category='water_absorption',
+            test_type='water_absorption',
+            min_threshold=6.0,
+            max_threshold=10.0,
+            unit='%',
+            description='Absorption d\'eau pour carreaux faïence BIIb: 6% < E ≤ 10%'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Absorption d\'eau - Groupe BIII (E > 10%)',
+            category='water_absorption',
+            test_type='water_absorption',
+            min_threshold=10.0,
+            max_threshold=None,
+            unit='%',
+            description='Absorption d\'eau pour carreaux terre cuite BIII: E > 10%'
         ),
         
-        # Breaking strength standards
+        # Normes de résistance à la rupture selon NM ISO 13006
         ISOStandard(
-            standard_code='ISO 10545-4',
+            standard_code='NM ISO 13006',
             title='Résistance à la rupture - Groupe BIa',
             category='breaking_strength',
             test_type='breaking_strength',
             min_threshold=1300,
             max_threshold=None,
             unit='N',
-            description='Force de rupture minimale pour carreaux BIa (≥1300N)'
+            description='Force de rupture minimale pour carreaux BIa: ≥ 1300N (épaisseur ≥ 7.5mm)'
         ),
         ISOStandard(
-            standard_code='ISO 10545-4',
+            standard_code='NM ISO 13006',
             title='Résistance à la rupture - Groupe BIb',
             category='breaking_strength',
             test_type='breaking_strength',
             min_threshold=1100,
             max_threshold=None,
             unit='N',
-            description='Force de rupture minimale pour carreaux BIb (≥1100N)'
+            description='Force de rupture minimale pour carreaux BIb: ≥ 1100N (épaisseur ≥ 7.5mm)'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Résistance à la rupture - Groupe BIIa',
+            category='breaking_strength',
+            test_type='breaking_strength',
+            min_threshold=1000,
+            max_threshold=None,
+            unit='N',
+            description='Force de rupture minimale pour carreaux BIIa: ≥ 1000N (épaisseur ≥ 7.5mm)'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Résistance à la rupture - Groupe BIIb/BIII',
+            category='breaking_strength',
+            test_type='breaking_strength',
+            min_threshold=600,
+            max_threshold=None,
+            unit='N',
+            description='Force de rupture minimale pour carreaux BIIb/BIII: ≥ 600N (épaisseur ≥ 7.5mm)'
+        ),
+        
+        # Normes de module de rupture selon NM ISO 13006  
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Module de rupture - Groupe BIa',
+            category='rupture_modulus',
+            test_type='breaking_strength',
+            min_threshold=35,
+            max_threshold=None,
+            unit='N/mm²',
+            description='Module de rupture minimal pour carreaux BIa: ≥ 35 N/mm²'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Module de rupture - Groupe BIb',
+            category='rupture_modulus',
+            test_type='breaking_strength',
+            min_threshold=30,
+            max_threshold=None,
+            unit='N/mm²',
+            description='Module de rupture minimal pour carreaux BIb: ≥ 30 N/mm²'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Module de rupture - Groupe BIIa',
+            category='rupture_modulus',
+            test_type='breaking_strength',
+            min_threshold=22,
+            max_threshold=None,
+            unit='N/mm²',
+            description='Module de rupture minimal pour carreaux BIIa: ≥ 22 N/mm²'
+        ),
+        ISOStandard(
+            standard_code='NM ISO 13006',
+            title='Module de rupture - Groupe BIIb/BIII',
+            category='rupture_modulus',
+            test_type='breaking_strength',
+            min_threshold=15,
+            max_threshold=None,
+            unit='N/mm²',
+            description='Module de rupture minimal pour carreaux BIIb/BIII: ≥ 15 N/mm²'
         ),
     ]
     
@@ -723,8 +815,8 @@ def init_default_iso_standards():
         db.session.add(standard)
     
     db.session.commit()
-    ActivityLog.log_activity('created', 'iso_standards', None, 'Default Standards', 
-                           f'Initialized {len(default_standards)} default ISO standards')
+    ActivityLog.log_activity('created', 'iso_standards', None, 'Laboratory Standards', 
+                           f'Initialized {len(default_standards)} ISO standards from laboratory documents')
     
-    flash(f'{len(default_standards)} normes ISO par défaut créées avec succès!', 'success')
+    flash(f'{len(default_standards)} normes ISO extraites des documents laboratoire créées avec succès!', 'success')
     return redirect(url_for('iso_standards_index'))

@@ -6,9 +6,18 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-certificate me-2"></i>Configuration des Normes ISO</h2>
-        <a href="{{ url_for('create_iso_standard') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i>Nouvelle Norme
-        </a>
+        <div class="btn-group">
+            {% if standards|length == 0 %}
+            <form method="POST" action="{{ url_for('init_default_iso_standards') }}" style="display: inline;">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-download me-1"></i>Importer Normes Laboratoire
+                </button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('create_iso_standard') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nouvelle Norme
+            </a>
+        </div>
     </div>
 
     <!-- Search and Filter -->
