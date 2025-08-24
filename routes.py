@@ -116,8 +116,7 @@ def view_batch(batch_id):
 
 @app.route('/production/<int:batch_id>/update_status', methods=['POST'])
 @login_required
-def update_batch_status():
-    batch_id = request.form['batch_id']
+def update_batch_status(batch_id):
     new_status = request.form['status']
     actual_quantity = request.form.get('actual_quantity')
     
