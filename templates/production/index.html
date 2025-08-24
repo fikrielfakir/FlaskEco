@@ -81,6 +81,12 @@
                                 <i class="fas fa-vial me-1"></i>Test
                             </a>
                         {% endif %}
+                        <form method="POST" action="{{ url_for('delete_batch', batch_id=batch.id) }}" class="d-inline" 
+                              onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer le lot {{ batch.lot_number }}? Cette action est irréversible.')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i>Supprimer
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

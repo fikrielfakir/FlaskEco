@@ -142,6 +142,26 @@ def update_batch_status(batch_id):
     flash(f'Statut du lot {batch.lot_number} mis à jour: {new_status}', 'success')
     return redirect(url_for('view_batch', batch_id=batch_id))
 
+@app.route('/production/<int:batch_id>/delete', methods=['POST'])
+@login_required
+def delete_batch(batch_id):
+    batch = ProductionBatch.query.get_or_404(batch_id)
+    lot_number = batch.lot_number
+    
+    # Log the deletion before removing
+    ActivityLog.log_activity('deleted', 'production_batch', batch.id, lot_number, 
+                           f'Deleted production batch: {batch.product_type}, {batch.planned_quantity} units')
+    
+    # Delete related quality tests first (cascade)
+    QualityTest.query.filter_by(batch_id=batch.id).delete()
+    
+    # Delete the batch
+    db.session.delete(batch)
+    db.session.commit()
+    
+    flash(f'Lot de production {lot_number} supprimé avec succès!', 'success')
+    return redirect(url_for('production_index'))
+
 # Quality Control Routes
 @app.route('/quality')
 @login_required
