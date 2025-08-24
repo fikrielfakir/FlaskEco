@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Modèles de Quantités - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0" style="font-weight: 700; color: #2d3748;">
+            <i class="fas fa-calculator me-3" style="color: #1E3151;"></i>Modèles de Quantités
+        </h1>
+        <a href="{{ url_for('create_quantity') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nouveau Modèle
+        </a>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if quantities %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Type de Produit</th>
+                                <th>Four</th>
+                                <th>Quantité Planifiée</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quantity in quantities %}
+                                <tr>
+                                    <td><strong>{{ quantity.name }}</strong></td>
+                                    <td>{{ quantity.product_type.name if quantity.product_type else '-' }}</td>
+                                    <td>{{ quantity.kiln.name if quantity.kiln else '-' }}</td>
+                                    <td>{{ quantity.planned_quantity }} pièces</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('edit_quantity', quantity_id=quantity.id) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="POST" action="{{ url_for('delete_quantity', quantity_id=quantity.id) }}" class="d-inline" 
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce modèle?')">
+                                                <button type="submit" class="btn btn-outline-danger">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-calculator text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="text-muted mt-2 mb-0">Aucun modèle de quantité configuré</p>
+                    <a href="{{ url_for('create_quantity') }}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i>Ajouter le premier modèle
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

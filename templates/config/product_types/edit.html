@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier Type de Produit - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-cube me-2"></i>Modifier Type: {{ product_type.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Nom du Produit *</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ product_type.name }}" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="category" class="form-label">Catégorie *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Sélectionner une catégorie</option>
+                                    <option value="carreaux_sol" {% if product_type.category == 'carreaux_sol' %}selected{% endif %}>Carreaux de Sol</option>
+                                    <option value="carreaux_mur" {% if product_type.category == 'carreaux_mur' %}selected{% endif %}>Carreaux de Mur</option>
+                                    <option value="gres_cerame" {% if product_type.category == 'gres_cerame' %}selected{% endif %}>Grès Cérame</option>
+                                    <option value="faience" {% if product_type.category == 'faience' %}selected{% endif %}>Faïence</option>
+                                    <option value="terre_cuite" {% if product_type.category == 'terre_cuite' %}selected{% endif %}>Terre Cuite</option>
+                                    <option value="autre" {% if product_type.category == 'autre' %}selected{% endif %}>Autre</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="dimensions" class="form-label">Dimensions</label>
+                                <input type="text" class="form-control" id="dimensions" name="dimensions" value="{{ product_type.dimensions or '' }}" placeholder="ex: 30x30, 25x40">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="thickness" class="form-label">Épaisseur (mm)</label>
+                                <input type="number" class="form-control" id="thickness" name="thickness" step="0.1" value="{{ product_type.thickness or '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="firing_temperature" class="form-label">Température de Cuisson (°C)</label>
+                                <input type="number" class="form-control" id="firing_temperature" name="firing_temperature" step="0.1" value="{{ product_type.firing_temperature or '' }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="firing_duration" class="form-label">Durée de Cuisson (heures)</label>
+                                <input type="number" class="form-control" id="firing_duration" name="firing_duration" step="0.1" value="{{ product_type.firing_duration or '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ product_type.description or '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('product_types_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Modifier le Type
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

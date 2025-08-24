@@ -147,3 +147,50 @@ class ISOStandard(db.Model):
 
     def __repr__(self):
         return f'<ISOStandard {self.standard_code}>'
+
+class Kiln(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    max_temperature = db.Column(db.Float, nullable=False)
+    capacity = db.Column(db.Integer, nullable=False)  # capacity in pieces
+    status = db.Column(db.String(20), default='active')  # active, maintenance, inactive
+    location = db.Column(db.String(100))
+    installation_date = db.Column(db.Date)
+    last_maintenance = db.Column(db.Date)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    def __repr__(self):
+        return f'<Kiln {self.name}>'
+
+class ProductType(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    category = db.Column(db.String(50), nullable=False)  # floor, wall, ceramic, etc.
+    dimensions = db.Column(db.String(50))  # e.g., "30x30", "25x40"
+    thickness = db.Column(db.Float)  # thickness in mm
+    firing_temperature = db.Column(db.Float)  # recommended firing temperature
+    firing_duration = db.Column(db.Float)  # recommended firing duration in hours
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    def __repr__(self):
+        return f'<ProductType {self.name}>'
+
+class QuantityTemplate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    product_type_id = db.Column(db.Integer, db.ForeignKey('product_type.id'))
+    kiln_id = db.Column(db.Integer, db.ForeignKey('kiln.id'))
+    planned_quantity = db.Column(db.Integer, nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    product_type = db.relationship('ProductType', backref='quantity_templates')
+    kiln = db.relationship('Kiln', backref='quantity_templates')
+
+    def __repr__(self):
+        return f'<QuantityTemplate {self.name}>'

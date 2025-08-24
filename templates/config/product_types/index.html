@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Types de Produits - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0" style="font-weight: 700; color: #2d3748;">
+            <i class="fas fa-cube me-3" style="color: #1E3151;"></i>Types de Produits
+        </h1>
+        <a href="{{ url_for('create_product_type') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nouveau Type
+        </a>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if product_types %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Catégorie</th>
+                                <th>Dimensions</th>
+                                <th>Épaisseur</th>
+                                <th>Température</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product_type in product_types %}
+                                <tr>
+                                    <td><strong>{{ product_type.name }}</strong></td>
+                                    <td>{{ product_type.category }}</td>
+                                    <td>{{ product_type.dimensions or '-' }}</td>
+                                    <td>{{ product_type.thickness }}mm {% if product_type.thickness %}{% endif %}</td>
+                                    <td>{{ product_type.firing_temperature }}°C {% if product_type.firing_temperature %}{% endif %}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('edit_product_type', product_type_id=product_type.id) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="POST" action="{{ url_for('delete_product_type', product_type_id=product_type.id) }}" class="d-inline" 
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce type de produit?')">
+                                                <button type="submit" class="btn btn-outline-danger">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-cube text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="text-muted mt-2 mb-0">Aucun type de produit configuré</p>
+                    <a href="{{ url_for('create_product_type') }}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i>Ajouter le premier type
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

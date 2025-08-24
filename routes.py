@@ -3,7 +3,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from app import app, db
-from models import User, ProductionBatch, QualityTest, EnergyConsumption, WasteRecord, RawMaterial, ISOStandard
+from models import User, ProductionBatch, QualityTest, EnergyConsumption, WasteRecord, RawMaterial, ISOStandard, Kiln, ProductType, QuantityTemplate
 
 @app.route('/')
 def index():
@@ -292,3 +292,182 @@ def add_material():
         return redirect(url_for('materials_index'))
     
     return render_template('materials/add_material.html')
+
+# Configuration Management Routes
+@app.route('/config')
+@login_required
+def config_index():
+    return render_template('config/index.html')
+
+# Kiln Management Routes
+@app.route('/config/kilns')
+@login_required
+def kilns_index():
+    kilns = Kiln.query.filter_by(is_active=True).order_by(Kiln.name).all()
+    return render_template('config/kilns/index.html', kilns=kilns)
+
+@app.route('/config/kilns/create', methods=['GET', 'POST'])
+@login_required
+def create_kiln():
+    if request.method == 'POST':
+        kiln = Kiln(
+            name=request.form['name'],
+            max_temperature=float(request.form['max_temperature']),
+            capacity=int(request.form['capacity']),
+            status=request.form['status'],
+            location=request.form['location'],
+            installation_date=datetime.strptime(request.form['installation_date'], '%Y-%m-%d').date() if request.form['installation_date'] else None,
+            last_maintenance=datetime.strptime(request.form['last_maintenance'], '%Y-%m-%d').date() if request.form['last_maintenance'] else None,
+            notes=request.form['notes']
+        )
+        
+        db.session.add(kiln)
+        db.session.commit()
+        flash(f'Four {kiln.name} créé avec succès!', 'success')
+        return redirect(url_for('kilns_index'))
+    
+    return render_template('config/kilns/create.html')
+
+@app.route('/config/kilns/<int:kiln_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_kiln(kiln_id):
+    kiln = Kiln.query.get_or_404(kiln_id)
+    
+    if request.method == 'POST':
+        kiln.name = request.form['name']
+        kiln.max_temperature = float(request.form['max_temperature'])
+        kiln.capacity = int(request.form['capacity'])
+        kiln.status = request.form['status']
+        kiln.location = request.form['location']
+        kiln.installation_date = datetime.strptime(request.form['installation_date'], '%Y-%m-%d').date() if request.form['installation_date'] else None
+        kiln.last_maintenance = datetime.strptime(request.form['last_maintenance'], '%Y-%m-%d').date() if request.form['last_maintenance'] else None
+        kiln.notes = request.form['notes']
+        
+        db.session.commit()
+        flash(f'Four {kiln.name} modifié avec succès!', 'success')
+        return redirect(url_for('kilns_index'))
+    
+    return render_template('config/kilns/edit.html', kiln=kiln)
+
+@app.route('/config/kilns/<int:kiln_id>/delete', methods=['POST'])
+@login_required
+def delete_kiln(kiln_id):
+    kiln = Kiln.query.get_or_404(kiln_id)
+    kiln.is_active = False
+    db.session.commit()
+    flash(f'Four {kiln.name} supprimé avec succès!', 'success')
+    return redirect(url_for('kilns_index'))
+
+# Product Type Management Routes
+@app.route('/config/product-types')
+@login_required
+def product_types_index():
+    product_types = ProductType.query.filter_by(is_active=True).order_by(ProductType.name).all()
+    return render_template('config/product_types/index.html', product_types=product_types)
+
+@app.route('/config/product-types/create', methods=['GET', 'POST'])
+@login_required
+def create_product_type():
+    if request.method == 'POST':
+        product_type = ProductType(
+            name=request.form['name'],
+            category=request.form['category'],
+            dimensions=request.form['dimensions'],
+            thickness=float(request.form['thickness']) if request.form['thickness'] else None,
+            firing_temperature=float(request.form['firing_temperature']) if request.form['firing_temperature'] else None,
+            firing_duration=float(request.form['firing_duration']) if request.form['firing_duration'] else None,
+            description=request.form['description']
+        )
+        
+        db.session.add(product_type)
+        db.session.commit()
+        flash(f'Type de produit {product_type.name} créé avec succès!', 'success')
+        return redirect(url_for('product_types_index'))
+    
+    return render_template('config/product_types/create.html')
+
+@app.route('/config/product-types/<int:product_type_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_product_type(product_type_id):
+    product_type = ProductType.query.get_or_404(product_type_id)
+    
+    if request.method == 'POST':
+        product_type.name = request.form['name']
+        product_type.category = request.form['category']
+        product_type.dimensions = request.form['dimensions']
+        product_type.thickness = float(request.form['thickness']) if request.form['thickness'] else None
+        product_type.firing_temperature = float(request.form['firing_temperature']) if request.form['firing_temperature'] else None
+        product_type.firing_duration = float(request.form['firing_duration']) if request.form['firing_duration'] else None
+        product_type.description = request.form['description']
+        
+        db.session.commit()
+        flash(f'Type de produit {product_type.name} modifié avec succès!', 'success')
+        return redirect(url_for('product_types_index'))
+    
+    return render_template('config/product_types/edit.html', product_type=product_type)
+
+@app.route('/config/product-types/<int:product_type_id>/delete', methods=['POST'])
+@login_required
+def delete_product_type(product_type_id):
+    product_type = ProductType.query.get_or_404(product_type_id)
+    product_type.is_active = False
+    db.session.commit()
+    flash(f'Type de produit {product_type.name} supprimé avec succès!', 'success')
+    return redirect(url_for('product_types_index'))
+
+# Quantity Template Management Routes
+@app.route('/config/quantities')
+@login_required
+def quantities_index():
+    quantities = QuantityTemplate.query.filter_by(is_active=True).order_by(QuantityTemplate.name).all()
+    return render_template('config/quantities/index.html', quantities=quantities)
+
+@app.route('/config/quantities/create', methods=['GET', 'POST'])
+@login_required
+def create_quantity():
+    if request.method == 'POST':
+        quantity = QuantityTemplate(
+            name=request.form['name'],
+            product_type_id=int(request.form['product_type_id']) if request.form['product_type_id'] else None,
+            kiln_id=int(request.form['kiln_id']) if request.form['kiln_id'] else None,
+            planned_quantity=int(request.form['planned_quantity']),
+            notes=request.form['notes']
+        )
+        
+        db.session.add(quantity)
+        db.session.commit()
+        flash(f'Modèle de quantité {quantity.name} créé avec succès!', 'success')
+        return redirect(url_for('quantities_index'))
+    
+    product_types = ProductType.query.filter_by(is_active=True).order_by(ProductType.name).all()
+    kilns = Kiln.query.filter_by(is_active=True).order_by(Kiln.name).all()
+    return render_template('config/quantities/create.html', product_types=product_types, kilns=kilns)
+
+@app.route('/config/quantities/<int:quantity_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_quantity(quantity_id):
+    quantity = QuantityTemplate.query.get_or_404(quantity_id)
+    
+    if request.method == 'POST':
+        quantity.name = request.form['name']
+        quantity.product_type_id = int(request.form['product_type_id']) if request.form['product_type_id'] else None
+        quantity.kiln_id = int(request.form['kiln_id']) if request.form['kiln_id'] else None
+        quantity.planned_quantity = int(request.form['planned_quantity'])
+        quantity.notes = request.form['notes']
+        
+        db.session.commit()
+        flash(f'Modèle de quantité {quantity.name} modifié avec succès!', 'success')
+        return redirect(url_for('quantities_index'))
+    
+    product_types = ProductType.query.filter_by(is_active=True).order_by(ProductType.name).all()
+    kilns = Kiln.query.filter_by(is_active=True).order_by(Kiln.name).all()
+    return render_template('config/quantities/edit.html', quantity=quantity, product_types=product_types, kilns=kilns)
+
+@app.route('/config/quantities/<int:quantity_id>/delete', methods=['POST'])
+@login_required
+def delete_quantity(quantity_id):
+    quantity = QuantityTemplate.query.get_or_404(quantity_id)
+    quantity.is_active = False
+    db.session.commit()
+    flash(f'Modèle de quantité {quantity.name} supprimé avec succès!', 'success')
+    return redirect(url_for('quantities_index'))
