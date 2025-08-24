@@ -3,7 +3,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from app import app, db
-from models import User, ProductionBatch, QualityTest, EnergyConsumption, WasteRecord, RawMaterial, ISOStandard, Kiln, ProductType, QuantityTemplate
+from models import User, ProductionBatch, QualityTest, EnergyConsumption, WasteRecord, RawMaterial, ISOStandard, Kiln, ProductType, QuantityTemplate, ActivityLog
 
 @app.route('/')
 def index():
@@ -20,9 +20,11 @@ def login():
         
         if user and user.check_password(password):
             login_user(user)
+            ActivityLog.log_activity('login', details=f'Successful login from {request.remote_addr}')
             flash('Connexion réussie!', 'success')
             return redirect(url_for('dashboard'))
         else:
+            ActivityLog.log_activity('login_failed', details=f'Failed login attempt for username: {username} from {request.remote_addr}', user=user)
             flash('Nom d\'utilisateur ou mot de passe incorrect.', 'error')
     
     return render_template('login.html')
@@ -30,6 +32,7 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
+    ActivityLog.log_activity('logout', details=f'User logged out from {request.remote_addr}')
     logout_user()
     flash('Déconnexion réussie.', 'info')
     return redirect(url_for('login'))
@@ -103,6 +106,7 @@ def create_batch():
         
         db.session.add(batch)
         db.session.commit()
+        ActivityLog.log_activity('created', 'production_batch', batch.id, lot_number, f'Created production batch: {batch.product_type}, {batch.planned_quantity} units')
         flash(f'Lot de production {lot_number} créé avec succès!', 'success')
         return redirect(url_for('production_index'))
     
@@ -126,6 +130,7 @@ def update_batch_status(batch_id):
     actual_quantity = request.form.get('actual_quantity')
     
     batch = ProductionBatch.query.get_or_404(batch_id)
+    old_status = batch.status
     batch.status = new_status
     batch.updated_at = datetime.utcnow()
     
@@ -133,6 +138,7 @@ def update_batch_status(batch_id):
         batch.actual_quantity = int(actual_quantity)
     
     db.session.commit()
+    ActivityLog.log_activity('updated', 'production_batch', batch.id, batch.lot_number, f'Status changed from {old_status} to {new_status}')
     flash(f'Statut du lot {batch.lot_number} mis à jour: {new_status}', 'success')
     return redirect(url_for('view_batch', batch_id=batch_id))
 
@@ -304,6 +310,25 @@ def add_material():
 def config_index():
     return render_template('config/index.html')
 
+@app.route('/activity-logs')
+@login_required
+def activity_logs():
+    # Get all activity logs with pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    activity_logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    # Get all users for filter dropdown
+    users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    
+    return render_template('activity_logs.html', 
+                         activity_logs=activity_logs.items, 
+                         users=users,
+                         pagination=activity_logs)
+
 # Kiln Management Routes
 @app.route('/config/kilns')
 @login_required
@@ -328,6 +353,7 @@ def create_kiln():
         
         db.session.add(kiln)
         db.session.commit()
+        ActivityLog.log_activity('created', 'kiln', kiln.id, kiln.name, f'Created kiln: {kiln.name}, capacity: {kiln.capacity}, max temp: {kiln.max_temperature}°C')
         flash(f'Four {kiln.name} créé avec succès!', 'success')
         return redirect(url_for('kilns_index'))
     
@@ -349,6 +375,7 @@ def edit_kiln(kiln_id):
         kiln.notes = request.form['notes']
         
         db.session.commit()
+        ActivityLog.log_activity('updated', 'kiln', kiln.id, kiln.name, f'Updated kiln: {kiln.name}')
         flash(f'Four {kiln.name} modifié avec succès!', 'success')
         return redirect(url_for('kilns_index'))
     
@@ -358,6 +385,7 @@ def edit_kiln(kiln_id):
 @login_required
 def delete_kiln(kiln_id):
     kiln = Kiln.query.get_or_404(kiln_id)
+    ActivityLog.log_activity('deleted', 'kiln', kiln.id, kiln.name, f'Deleted kiln: {kiln.name}')
     kiln.is_active = False
     db.session.commit()
     flash(f'Four {kiln.name} supprimé avec succès!', 'success')

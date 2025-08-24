@@ -1,6 +1,6 @@
 from datetime import datetime
 from app import db
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(UserMixin, db.Model):
@@ -194,3 +194,42 @@ class QuantityTemplate(db.Model):
 
     def __repr__(self):
         return f'<QuantityTemplate {self.name}>'
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(db.String(100), nullable=False)  # created, updated, deleted, login, logout
+    entity_type = db.Column(db.String(50))  # production_batch, quality_test, kiln, etc.
+    entity_id = db.Column(db.Integer)  # ID of the affected entity
+    entity_name = db.Column(db.String(200))  # Name/identifier of the entity
+    details = db.Column(db.Text)  # Additional details about the action
+    ip_address = db.Column(db.String(45))  # User's IP address
+    user_agent = db.Column(db.String(500))  # Browser/user agent
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='activity_logs')
+    
+    def __repr__(self):
+        return f'<ActivityLog {self.user.username if self.user else "Unknown"}: {self.action}>'
+    
+    @staticmethod
+    def log_activity(action, entity_type=None, entity_id=None, entity_name=None, details=None, user=None):
+        """Log user activity to the database"""
+        from flask import request
+        
+        if user is None:
+            user = current_user if current_user.is_authenticated else None
+        
+        if user:
+            log = ActivityLog(
+                user_id=user.id,
+                action=action,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                entity_name=entity_name,
+                details=details,
+                ip_address=request.remote_addr if request else None,
+                user_agent=request.headers.get('User-Agent') if request else None
+            )
+            db.session.add(log)
+            db.session.commit()

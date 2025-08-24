@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Journal d'Activité - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0" style="font-weight: 700; color: #2d3748;">
+            <i class="fas fa-history me-3" style="color: #1E3151;"></i>Journal d'Activité
+        </h1>
+        <div class="d-flex gap-2">
+            <select class="form-select" id="userFilter" style="width: auto;">
+                <option value="">Tous les utilisateurs</option>
+                {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.username }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select" id="actionFilter" style="width: auto;">
+                <option value="">Toutes les actions</option>
+                <option value="login">Connexions</option>
+                <option value="logout">Déconnexions</option>
+                <option value="created">Créations</option>
+                <option value="updated">Modifications</option>
+                <option value="deleted">Suppressions</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if activity_logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date/Heure</th>
+                                <th>Utilisateur</th>
+                                <th>Action</th>
+                                <th>Entité</th>
+                                <th>Détails</th>
+                                <th>IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            {% for log in activity_logs %}
+                                <tr data-user="{{ log.user_id }}" data-action="{{ log.action }}">
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ log.user.username if log.user else 'Système' }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ log.user.role if log.user else '' }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if log.action == 'login' %}success{% elif log.action == 'logout' %}secondary{% elif log.action == 'created' %}primary{% elif log.action == 'updated' %}warning{% elif log.action == 'deleted' %}danger{% else %}info{% endif %}">
+                                            {% if log.action == 'login' %}
+                                                <i class="fas fa-sign-in-alt me-1"></i>Connexion
+                                            {% elif log.action == 'logout' %}
+                                                <i class="fas fa-sign-out-alt me-1"></i>Déconnexion
+                                            {% elif log.action == 'created' %}
+                                                <i class="fas fa-plus me-1"></i>Création
+                                            {% elif log.action == 'updated' %}
+                                                <i class="fas fa-edit me-1"></i>Modification
+                                            {% elif log.action == 'deleted' %}
+                                                <i class="fas fa-trash me-1"></i>Suppression
+                                            {% else %}
+                                                <i class="fas fa-info me-1"></i>{{ log.action }}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if log.entity_type %}
+                                            <strong>{{ log.entity_name or log.entity_type }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                {% if log.entity_type == 'production_batch' %}
+                                                    Lot de Production
+                                                {% elif log.entity_type == 'quality_test' %}
+                                                    Test Qualité
+                                                {% elif log.entity_type == 'kiln' %}
+                                                    Four
+                                                {% elif log.entity_type == 'product_type' %}
+                                                    Type de Produit
+                                                {% elif log.entity_type == 'quantity_template' %}
+                                                    Modèle de Quantité
+                                                {% else %}
+                                                    {{ log.entity_type }}
+                                                {% endif %}
+                                            </small>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 300px;" title="{{ log.details or '' }}">
+                                            {{ log.details or '-' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ log.ip_address or '-' }}</small>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-history text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="text-muted mt-2 mb-0">Aucune activité enregistrée</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Filter functionality
+document.getElementById('userFilter').addEventListener('change', filterLogs);
+document.getElementById('actionFilter').addEventListener('change', filterLogs);
+
+function filterLogs() {
+    const userFilter = document.getElementById('userFilter').value;
+    const actionFilter = document.getElementById('actionFilter').value;
+    const rows = document.querySelectorAll('#logsTableBody tr');
+    
+    rows.forEach(row => {
+        const userMatch = !userFilter || row.dataset.user === userFilter;
+        const actionMatch = !actionFilter || row.dataset.action === actionFilter;
+        
+        if (userMatch && actionMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

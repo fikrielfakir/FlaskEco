@@ -115,12 +115,19 @@ body {
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .form-control:focus, .form-select:focus {
     border-color: #1E3151;
-    box-shadow: 0 0 0 4px rgba(30, 49, 81, 0.1);
+    box-shadow: 0 0 0 4px rgba(30, 49, 81, 0.1), 0 8px 20px rgba(0, 0, 0, 0.2);
     background: rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+}
+
+.form-control:hover, .form-select:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
 }
 
 .form-label {
