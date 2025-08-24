@@ -1,9 +1,18 @@
 from datetime import datetime, date
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from app import app, db
 from models import User, ProductionBatch, QualityTest, EnergyConsumption, WasteRecord, RawMaterial, ISOStandard, Kiln, ProductType, QuantityTemplate, ActivityLog
+import io
+import pandas as pd
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.graphics.shapes import Drawing, Line
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 @app.route('/')
 def index():
@@ -362,6 +371,546 @@ def activity_logs():
                          activity_logs=activity_logs.items, 
                          users=users,
                          pagination=activity_logs)
+
+# Export Routes
+@app.route('/quality/export/<format_type>')
+@login_required
+def export_quality_tests(format_type):
+    """Export quality tests in PDF or Excel format"""
+    # Get filters from query parameters
+    search = request.args.get('search', '')
+    test_type = request.args.get('test_type', '')
+    
+    query = QualityTest.query.join(ProductionBatch)
+    
+    if search:
+        query = query.filter(ProductionBatch.lot_number.contains(search))
+    
+    if test_type:
+        query = query.filter_by(test_type=test_type)
+    
+    tests = query.order_by(QualityTest.test_date.desc()).all()
+    
+    if format_type == 'pdf':
+        return generate_quality_pdf_report(tests)
+    elif format_type == 'excel':
+        return generate_quality_excel_report(tests)
+    else:
+        flash('Format d\'export non supporté.', 'error')
+        return redirect(url_for('quality_index'))
+
+@app.route('/quality/<int:test_id>/export/<format_type>')
+@login_required
+def export_single_quality_test(test_id, format_type):
+    """Export a single quality test as professional report"""
+    test = QualityTest.query.get_or_404(test_id)
+    
+    if format_type == 'pdf':
+        return generate_single_test_pdf_report(test)
+    elif format_type == 'excel':
+        return generate_single_test_excel_report(test)
+    else:
+        flash('Format d\'export non supporté.', 'error')
+        return redirect(url_for('view_test', test_id=test_id))
+
+@app.route('/production/export/<format_type>')
+@login_required
+def export_production_batches(format_type):
+    """Export production batches in PDF or Excel format"""
+    search = request.args.get('search', '')
+    status_filter = request.args.get('status', '')
+    
+    query = ProductionBatch.query
+    
+    if search:
+        query = query.filter(ProductionBatch.lot_number.contains(search) | 
+                           ProductionBatch.product_type.contains(search))
+    
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    
+    batches = query.order_by(ProductionBatch.created_at.desc()).all()
+    
+    if format_type == 'pdf':
+        return generate_production_pdf_report(batches)
+    elif format_type == 'excel':
+        return generate_production_excel_report(batches)
+    else:
+        flash('Format d\'export non supporté.', 'error')
+        return redirect(url_for('production_index'))
+
+def generate_quality_pdf_report(tests):
+    """Generate professional PDF report for quality tests"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    # Container for the 'Flowable' objects
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#2c3e50')
+    )
+    
+    header_style = ParagraphStyle(
+        'HeaderStyle',
+        parent=styles['Normal'],
+        fontSize=12,
+        spaceAfter=20,
+        textColor=colors.HexColor('#34495e')
+    )
+    
+    # Title
+    title = Paragraph("RAPPORT DE CONTRÔLE QUALITÉ", title_style)
+    elements.append(title)
+    
+    # Company header
+    company_info = Paragraph(
+        f"<b>CERAMICA DERS</b><br/>"
+        f"SERVICE LABORATOIRE<br/>"
+        f"Date d'édition: {datetime.now().strftime('%d/%m/%Y')}<br/>"
+        f"Nombre de tests: {len(tests)}",
+        header_style
+    )
+    elements.append(company_info)
+    elements.append(Spacer(1, 20))
+    
+    if tests:
+        # Table data
+        data = [['Date', 'N° Lot', 'Type Test', 'Norme ISO', 'Technicien', 'Score', 'Résultat']]
+        
+        for test in tests:
+            score = f"{test.compliance_score:.1f}%" if test.compliance_score else "-"
+            result_text = "Conforme" if test.result == 'pass' else "Non conforme"
+            
+            data.append([
+                test.test_date.strftime('%d/%m/%Y'),
+                test.batch.lot_number,
+                test.test_type,
+                test.iso_standard or '-',
+                test.technician.username,
+                score,
+                result_text
+            ])
+        
+        # Create table
+        table = Table(data, colWidths=[1*inch, 1.2*inch, 1.1*inch, 1*inch, 1*inch, 0.8*inch, 1*inch])
+        
+        # Table style
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
+    else:
+        no_data = Paragraph("Aucun test de qualité trouvé.", styles['Normal'])
+        elements.append(no_data)
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'rapport_qualite_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf',
+        mimetype='application/pdf'
+    )
+
+def generate_single_test_pdf_report(test):
+    """Generate professional PDF report for a single quality test"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#2c3e50')
+    )
+    
+    # Title based on test type
+    if test.test_type == 'dimensional':
+        title_text = "RÉSULTATS DES ESSAIS DIMENSIONNELS ET QUALITÉ DE SURFACE"
+    elif test.test_type == 'water_absorption':
+        title_text = "CONTRÔLE D'ABSORPTION D'EAU"
+    elif test.test_type == 'breaking_strength':
+        title_text = "CONTRÔLE DE RÉSISTANCE"
+    else:
+        title_text = "RAPPORT DE TEST DE QUALITÉ"
+    
+    title = Paragraph(title_text, title_style)
+    elements.append(title)
+    
+    # Header with company info
+    header_data = [
+        ['CERAMICA DERS', 'SERVICE LABORATOIRE'],
+        ['CODE:', f'EQ-{test.test_type.upper()}-{test.id:04d}'],
+        ['VERSION:', '2.0'],
+        ['DATE:', test.test_date.strftime('%d/%m/%Y')]
+    ]
+    
+    header_table = Table(header_data, colWidths=[3*inch, 3*inch])
+    header_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ecf0f1')),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT')
+    ]))
+    
+    elements.append(header_table)
+    elements.append(Spacer(1, 20))
+    
+    # Technical data section
+    tech_data = [
+        ['Données techniques:', '', 'Date:', test.test_date.strftime('%d/%m/%Y')],
+        ['Numéro de lot:', test.batch.lot_number, 'Type de produit:', test.batch.product_type],
+        ['Norme ISO:', test.iso_standard or 'N/A', 'Technicien:', test.technician.username]
+    ]
+    
+    tech_table = Table(tech_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+    tech_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ecf0f1')),
+        ('BACKGROUND', (2, 0), (2, -1), colors.HexColor('#ecf0f1'))
+    ]))
+    
+    elements.append(tech_table)
+    elements.append(Spacer(1, 20))
+    
+    # Measurements table based on test type
+    if test.test_type == 'dimensional':
+        measurement_data = [
+            ['Paramètre', 'Valeur mesurée', 'Unité', 'Spécification', 'Résultat'],
+            ['Longueur', f'{test.length:.2f}' if test.length else 'N/A', 'mm', 'ISO 13006', '✓' if test.result == 'pass' else '✗'],
+            ['Largeur', f'{test.width:.2f}' if test.width else 'N/A', 'mm', 'ISO 13006', '✓' if test.result == 'pass' else '✗'],
+            ['Épaisseur', f'{test.thickness:.2f}' if test.thickness else 'N/A', 'mm', 'ISO 13006', '✓' if test.result == 'pass' else '✗'],
+            ['Gauchissement', f'{test.warping:.2f}' if test.warping else 'N/A', 'mm', '< 0.5%', '✓' if test.result == 'pass' else '✗']
+        ]
+    elif test.test_type == 'water_absorption':
+        measurement_data = [
+            ['Paramètre', 'Valeur mesurée', 'Unité', 'Spécification', 'Résultat'],
+            ['Absorption d\'eau', f'{test.water_absorption:.2f}' if test.water_absorption else 'N/A', '%', '< 3%', '✓' if test.result == 'pass' else '✗']
+        ]
+    elif test.test_type == 'breaking_strength':
+        measurement_data = [
+            ['Paramètre', 'Valeur mesurée', 'Unité', 'Spécification', 'Résultat'],
+            ['Résistance à la rupture', f'{test.breaking_strength:.2f}' if test.breaking_strength else 'N/A', 'N/mm²', '> 1300 N', '✓' if test.result == 'pass' else '✗']
+        ]
+    else:
+        measurement_data = [
+            ['Paramètre', 'Valeur mesurée', 'Unité', 'Spécification', 'Résultat'],
+            ['Test générique', 'Voir notes', '-', test.iso_standard or 'N/A', '✓' if test.result == 'pass' else '✗']
+        ]
+    
+    measurement_table = Table(measurement_data, colWidths=[1.5*inch, 1.2*inch, 0.8*inch, 1.2*inch, 1*inch])
+    measurement_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER')
+    ]))
+    
+    elements.append(measurement_table)
+    elements.append(Spacer(1, 20))
+    
+    # Final result section
+    result_text = "CONFORME" if test.result == 'pass' else "NON CONFORME"
+    result_color = colors.green if test.result == 'pass' else colors.red
+    
+    result_style = ParagraphStyle(
+        'ResultStyle',
+        parent=styles['Normal'],
+        fontSize=14,
+        textColor=result_color,
+        alignment=TA_CENTER,
+        spaceAfter=20
+    )
+    
+    elements.append(Paragraph(f"<b>RÉSULTAT: {result_text}</b>", result_style))
+    
+    if test.compliance_score:
+        elements.append(Paragraph(f"Score de conformité: {test.compliance_score:.1f}%", styles['Normal']))
+    
+    if test.notes:
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("<b>Notes:</b>", styles['Normal']))
+        elements.append(Paragraph(test.notes, styles['Normal']))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'test_{test.test_type}_{test.batch.lot_number}_{test.test_date.strftime("%Y%m%d")}.pdf',
+        mimetype='application/pdf'
+    )
+
+def generate_quality_excel_report(tests):
+    """Generate Excel report for quality tests"""
+    # Create a DataFrame
+    data = []
+    for test in tests:
+        data.append({
+            'Date': test.test_date.strftime('%d/%m/%Y'),
+            'Numéro de Lot': test.batch.lot_number,
+            'Type de Produit': test.batch.product_type,
+            'Type de Test': test.test_type,
+            'Norme ISO': test.iso_standard or '',
+            'Technicien': test.technician.username,
+            'Longueur (mm)': test.length if test.length else '',
+            'Largeur (mm)': test.width if test.width else '',
+            'Épaisseur (mm)': test.thickness if test.thickness else '',
+            'Gauchissement (mm)': test.warping if test.warping else '',
+            'Absorption d\'eau (%)': test.water_absorption if test.water_absorption else '',
+            'Résistance rupture (N/mm²)': test.breaking_strength if test.breaking_strength else '',
+            'Résistance abrasion': test.abrasion_resistance if test.abrasion_resistance else '',
+            'Score de Conformité (%)': test.compliance_score if test.compliance_score else '',
+            'Résultat': 'Conforme' if test.result == 'pass' else 'Non conforme',
+            'Défauts visuels': test.visual_defects if test.visual_defects else '',
+            'Notes': test.notes if test.notes else ''
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # Create Excel file in memory
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Tests de Qualité', index=False)
+        
+        # Get the workbook and worksheet
+        workbook = writer.book
+        worksheet = writer.sheets['Tests de Qualité']
+        
+        # Auto-adjust column widths
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    output.seek(0)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f'rapport_qualite_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+def generate_single_test_excel_report(test):
+    """Generate Excel report for a single quality test"""
+    # Basic test info
+    data = [{
+        'Numéro de Lot': test.batch.lot_number,
+        'Type de Produit': test.batch.product_type,
+        'Date de Test': test.test_date.strftime('%d/%m/%Y'),
+        'Type de Test': test.test_type,
+        'Norme ISO': test.iso_standard or '',
+        'Technicien': test.technician.username,
+        'Longueur (mm)': test.length if test.length else '',
+        'Largeur (mm)': test.width if test.width else '',
+        'Épaisseur (mm)': test.thickness if test.thickness else '',
+        'Gauchissement (mm)': test.warping if test.warping else '',
+        'Absorption d\'eau (%)': test.water_absorption if test.water_absorption else '',
+        'Résistance rupture (N/mm²)': test.breaking_strength if test.breaking_strength else '',
+        'Résistance abrasion': test.abrasion_resistance if test.abrasion_resistance else '',
+        'Score de Conformité (%)': test.compliance_score if test.compliance_score else '',
+        'Résultat': 'Conforme' if test.result == 'pass' else 'Non conforme',
+        'Défauts visuels': test.visual_defects if test.visual_defects else '',
+        'Notes': test.notes if test.notes else ''
+    }]
+    
+    df = pd.DataFrame(data)
+    
+    # Create Excel file in memory
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Test Détaillé', index=False)
+        
+        workbook = writer.book
+        worksheet = writer.sheets['Test Détaillé']
+        
+        # Auto-adjust column widths
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    output.seek(0)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f'test_detaille_{test.batch.lot_number}_{test.test_date.strftime("%Y%m%d")}.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+def generate_production_pdf_report(batches):
+    """Generate PDF report for production batches"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#2c3e50')
+    )
+    
+    # Title
+    title = Paragraph("RAPPORT DE PRODUCTION", title_style)
+    elements.append(title)
+    
+    # Header info
+    header_info = Paragraph(
+        f"<b>CERAMICA DERS</b><br/>"
+        f"Date d'édition: {datetime.now().strftime('%d/%m/%Y')}<br/>"
+        f"Nombre de lots: {len(batches)}",
+        styles['Normal']
+    )
+    elements.append(header_info)
+    elements.append(Spacer(1, 20))
+    
+    if batches:
+        # Table data
+        data = [['N° Lot', 'Produit', 'Quantité Prévue', 'Quantité Réelle', 'Date', 'Four', 'Statut']]
+        
+        for batch in batches:
+            data.append([
+                batch.lot_number,
+                batch.product_type,
+                str(batch.planned_quantity),
+                str(batch.actual_quantity),
+                batch.production_date.strftime('%d/%m/%Y'),
+                batch.kiln_number,
+                batch.status
+            ])
+        
+        table = Table(data, colWidths=[1.2*inch, 1.3*inch, 0.9*inch, 0.9*inch, 1*inch, 0.8*inch, 1*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
+    else:
+        no_data = Paragraph("Aucun lot de production trouvé.", styles['Normal'])
+        elements.append(no_data)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'rapport_production_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf',
+        mimetype='application/pdf'
+    )
+
+def generate_production_excel_report(batches):
+    """Generate Excel report for production batches"""
+    data = []
+    for batch in batches:
+        data.append({
+            'Numéro de Lot': batch.lot_number,
+            'Type de Produit': batch.product_type,
+            'Quantité Prévue': batch.planned_quantity,
+            'Quantité Réelle': batch.actual_quantity,
+            'Date de Production': batch.production_date.strftime('%d/%m/%Y'),
+            'Numéro de Four': batch.kiln_number,
+            'Température (°C)': batch.kiln_temperature if batch.kiln_temperature else '',
+            'Durée de Cuisson (h)': batch.firing_duration if batch.firing_duration else '',
+            'Statut': batch.status,
+            'Superviseur': batch.supervisor.username if batch.supervisor else '',
+            'Date de Création': batch.created_at.strftime('%d/%m/%Y'),
+            'Notes': batch.notes if batch.notes else ''
+        })
+    
+    df = pd.DataFrame(data)
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Production', index=False)
+        
+        workbook = writer.book
+        worksheet = writer.sheets['Production']
+        
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    output.seek(0)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f'rapport_production_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 # Kiln Management Routes
 @app.route('/config/kilns')
