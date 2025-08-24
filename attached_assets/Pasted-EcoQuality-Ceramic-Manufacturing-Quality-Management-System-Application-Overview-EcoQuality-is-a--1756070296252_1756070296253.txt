@@ -1,0 +1,96 @@
+EcoQuality - Ceramic Manufacturing Quality Management System
+Application Overview
+EcoQuality is a comprehensive quality management system specifically designed for ceramic tile manufacturing facilities. The application provides end-to-end quality control, production tracking, energy monitoring, waste management, and regulatory compliance for ceramic production operations.
+
+Core Business Domain
+Industry: Ceramic tile manufacturing and quality control
+Target Users: Ceramic production facilities, quality control departments, environmental managers
+Primary Focus: ISO compliance, production efficiency, environmental sustainability
+Key Features & Modules
+
+
+1. Production Management ("Gestion des Lots de Production")
+Create and track production lots/batches
+Assign batch numbers, product types, production dates
+Monitor kiln operations (temperature, duration, kiln numbers)
+Track planned vs actual quantities
+Production status management (planned, in progress, completed, approved, rejected)
+Supervisor assignment and tracking
+
+
+2. Quality Control System
+ISO 13006 compliance testing for ceramic tiles
+Dimensional measurements (length, width, thickness, warping)
+Physical property testing (water absorption, breaking strength)
+Abrasion resistance testing (PEI classification)
+Visual defect inspection and documentation
+Equipment calibration tracking
+Pass/fail determination with compliance scoring
+
+
+3. Energy Monitoring
+Multi-source energy consumption tracking (electricity, gas, solar)
+Kiln energy efficiency monitoring
+Heat recovery system tracking (target: 511 MWh/year)
+Energy cost analysis and reduction targets
+Environmental KPI monitoring (12% energy reduction target)
+
+
+4. Waste Management
+Liquid waste recycling tracking (100% recycling target)
+Solid waste valorization monitoring (100% reuse/recycling target)
+Waste categorization and disposal method tracking
+Environmental impact assessment
+
+
+5. Raw Materials Management
+Inventory tracking for ceramic production materials
+Quality control of incoming materials
+Supplier management and material specifications
+Key tables include:
+
+users - User authentication and role management
+production_batches - Production lot tracking
+quality_tests - Quality control test results
+energy_consumption - Energy monitoring data
+waste_records - Waste management tracking
+raw_materials - Material inventory
+iso_standards - ISO compliance standards and thresholds
+User Roles & Authentication
+Admin: Full system access and user management
+Quality Technician: Quality testing and analysis
+Production Manager: Production planning and monitoring
+Environment Manager: Energy and waste management
+Operator: Basic production data entry
+Frontend Features
+Responsive web interface with Bootstrap styling
+Real-time form validation and user feedback
+Interactive dashboards for each module
+Comprehensive filtering and search capabilities
+Automatic lot number generation
+Multi-language support (French interface)
+Current Application State
+✅ Fully Functional: All core modules operational
+✅ Database Initialized: Complete schema with sample data
+✅ Authentication Working: Admin user (admin/admin123) configured
+✅ Production Module: Lot creation and management functional
+✅ Quality Module: ISO testing framework implemented
+✅ Energy & Waste Modules: Environmental tracking capabilities
+✅ Server Running: Application hosted on port 5000
+ISO Standards Compliance
+The system implements several international standards:
+
+ISO 13006: Ceramic tiles classification and characteristics
+ISO 10545-3: Water absorption determination
+ISO 10545-4: Breaking strength testing
+ISO 10545-7: Abrasion resistance testing
+NM 10.1.008: Moroccan ceramic quality standards
+Environmental Sustainability Features
+Energy consumption reduction monitoring (12% target)
+Waste recycling tracking (100% liquid waste recycling)
+Heat recovery optimization (511 MWh annual target)
+Solid waste valorization (100% reuse target)
+Carbon footprint tracking and reduction
+
+Status: Production-ready with all features operational
+This application represents a complete digital transformation solution for ceramic manufacturing quality control, combining traditional manufacturing processes with modern data management and environmental sustainability practices.
