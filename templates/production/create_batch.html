@@ -17,13 +17,14 @@
                                 <label for="product_type" class="form-label">Type de Produit *</label>
                                 <select class="form-select" id="product_type" name="product_type" required>
                                     <option value="">Sélectionner un type</option>
-                                    <option value="Carreaux Sol 30x30">Carreaux Sol 30x30</option>
-                                    <option value="Carreaux Sol 45x45">Carreaux Sol 45x45</option>
-                                    <option value="Carreaux Sol 60x60">Carreaux Sol 60x60</option>
-                                    <option value="Carreaux Mur 20x25">Carreaux Mur 20x25</option>
-                                    <option value="Carreaux Mur 25x40">Carreaux Mur 25x40</option>
-                                    <option value="Grès Cérame 30x30">Grès Cérame 30x30</option>
-                                    <option value="Grès Cérame 60x60">Grès Cérame 60x60</option>
+                                    {% for product_type in product_types %}
+                                        <option value="{{ product_type.name }}" 
+                                                data-temperature="{{ product_type.firing_temperature or '' }}"
+                                                data-duration="{{ product_type.firing_duration or '' }}">
+                                            {{ product_type.name }}
+                                            {% if product_type.dimensions %} - {{ product_type.dimensions }}{% endif %}
+                                        </option>
+                                    {% endfor %}
                                 </select>
                             </div>
                             
@@ -45,13 +46,22 @@
                             </div>
                             
                             <div class="col-md-6 mb-3">
-                                <label for="kiln_number" class="form-label">Numéro de Four *</label>
+                                <label for="kiln_number" class="form-label">Four *</label>
                                 <select class="form-select" id="kiln_number" name="kiln_number" required>
                                     <option value="">Sélectionner un four</option>
-                                    <option value="FOUR-001">FOUR-001</option>
-                                    <option value="FOUR-002">FOUR-002</option>
-                                    <option value="FOUR-003">FOUR-003</option>
-                                    <option value="FOUR-004">FOUR-004</option>
+                                    {% for kiln in kilns %}
+                                        <option value="{{ kiln.name }}" 
+                                                data-max-temp="{{ kiln.max_temperature }}"
+                                                data-capacity="{{ kiln.capacity }}">
+                                            {{ kiln.name }} 
+                                            ({{ kiln.max_temperature }}°C, {{ kiln.capacity }} pièces)
+                                        </option>
+                                    {% endfor %}
+                                    {% if not kilns %}
+                                        <option value="" disabled>Aucun four configuré - 
+                                            <a href="{{ url_for('create_kiln') }}" target="_blank">Ajouter un four</a>
+                                        </option>
+                                    {% endif %}
                                 </select>
                             </div>
                         </div>
@@ -100,5 +110,39 @@
 <script>
 // Set today's date as default
 document.getElementById('production_date').valueAsDate = new Date();
+
+// Auto-populate temperature and duration based on product type selection
+document.getElementById('product_type').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const temperature = selectedOption.dataset.temperature;
+    const duration = selectedOption.dataset.duration;
+    
+    if (temperature) {
+        document.getElementById('kiln_temperature').value = temperature;
+    }
+    if (duration) {
+        document.getElementById('firing_duration').value = duration;
+    }
+});
+
+// Auto-populate max temperature validation based on kiln selection
+document.getElementById('kiln_number').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const maxTemp = selectedOption.dataset.maxTemp;
+    const capacity = selectedOption.dataset.capacity;
+    
+    const tempInput = document.getElementById('kiln_temperature');
+    const quantityInput = document.getElementById('planned_quantity');
+    
+    if (maxTemp) {
+        tempInput.setAttribute('max', maxTemp);
+        tempInput.setAttribute('placeholder', `Max: ${maxTemp}°C`);
+    }
+    
+    if (capacity) {
+        quantityInput.setAttribute('max', capacity);
+        quantityInput.setAttribute('placeholder', `Max: ${capacity} pièces`);
+    }
+});
 </script>
 {% endblock %}

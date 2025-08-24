@@ -106,7 +106,12 @@ def create_batch():
         flash(f'Lot de production {lot_number} créé avec succès!', 'success')
         return redirect(url_for('production_index'))
     
-    return render_template('production/create_batch.html')
+    # Fetch kilns and product types from configuration
+    kilns = Kiln.query.filter_by(is_active=True, status='active').order_by(Kiln.name).all()
+    product_types = ProductType.query.filter_by(is_active=True).order_by(ProductType.name).all()
+    quantity_templates = QuantityTemplate.query.filter_by(is_active=True).order_by(QuantityTemplate.name).all()
+    
+    return render_template('production/create_batch.html', kilns=kilns, product_types=product_types, quantity_templates=quantity_templates)
 
 @app.route('/production/<int:batch_id>')
 @login_required
