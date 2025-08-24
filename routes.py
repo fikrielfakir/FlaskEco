@@ -9,7 +9,7 @@ from models import User, ProductionBatch, QualityTest, EnergyConsumption, WasteR
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return render_template('index.html')
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -32,7 +32,7 @@ def login():
 def logout():
     logout_user()
     flash('Déconnexion réussie.', 'info')
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 @app.route('/dashboard')
 @login_required
