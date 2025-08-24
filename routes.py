@@ -206,12 +206,26 @@ def create_test():
             test.abrasion_resistance = request.form['abrasion_resistance']
         
         test.visual_defects = request.form['visual_defects']
-        test.compliance_score = float(request.form['compliance_score']) if request.form['compliance_score'] else None
-        test.result = request.form['result']
+        
+        # Try automatic result determination first
+        auto_result = test.determine_result_automatically()
+        if auto_result and not request.form.get('manual_override'):
+            # Use automatic result
+            test.result = auto_result
+            ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
+                                   f'Test automatiquement évalué: {auto_result.upper()} (Score: {test.compliance_score:.1f}%)')
+        else:
+            # Use manual result if auto-detection failed or manual override requested
+            test.compliance_score = float(request.form['compliance_score']) if request.form['compliance_score'] else None
+            test.result = request.form['result']
+            ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
+                                   f'Test manuellement évalué: {test.result.upper()}')
         
         db.session.add(test)
         db.session.commit()
-        flash('Test de qualité créé avec succès!', 'success')
+        
+        result_text = 'Conforme (Pass)' if test.result == 'pass' else 'Non Conforme (Fail)'
+        flash(f'Test de qualité créé avec succès! Résultat: {result_text}', 'success' if test.result == 'pass' else 'warning')
         return redirect(url_for('quality_index'))
     
     batches = ProductionBatch.query.filter_by(status='completed').all()
@@ -524,3 +538,193 @@ def delete_quantity(quantity_id):
     db.session.commit()
     flash(f'Modèle de quantité {quantity.name} supprimé avec succès!', 'success')
     return redirect(url_for('quantities_index'))
+
+# ISO Standards Management Routes
+@app.route('/config/iso-standards')
+@login_required
+def iso_standards_index():
+    search = request.args.get('search', '')
+    test_type_filter = request.args.get('test_type', '')
+    
+    query = ISOStandard.query.filter_by(is_active=True)
+    
+    if search:
+        query = query.filter(ISOStandard.standard_code.contains(search) | 
+                           ISOStandard.title.contains(search))
+    
+    if test_type_filter:
+        query = query.filter_by(test_type=test_type_filter)
+    
+    standards = query.order_by(ISOStandard.standard_code, ISOStandard.category).all()
+    return render_template('config/iso_standards/index.html', 
+                         standards=standards, 
+                         search=search, 
+                         test_type_filter=test_type_filter)
+
+@app.route('/config/iso-standards/create', methods=['GET', 'POST'])
+@login_required
+def create_iso_standard():
+    if request.method == 'POST':
+        standard = ISOStandard(
+            standard_code=request.form['standard_code'],
+            title=request.form['title'],
+            category=request.form['category'],
+            test_type=request.form['test_type'],
+            min_threshold=float(request.form['min_threshold']) if request.form['min_threshold'] else None,
+            max_threshold=float(request.form['max_threshold']) if request.form['max_threshold'] else None,
+            unit=request.form['unit'],
+            description=request.form['description']
+        )
+        
+        db.session.add(standard)
+        db.session.commit()
+        ActivityLog.log_activity('created', 'iso_standard', standard.id, f"{standard.standard_code}-{standard.category}", 
+                               f'Created ISO standard: {standard.title}')
+        flash(f'Norme ISO {standard.standard_code} créée avec succès!', 'success')
+        return redirect(url_for('iso_standards_index'))
+    
+    return render_template('config/iso_standards/create.html')
+
+@app.route('/config/iso-standards/<int:standard_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_iso_standard(standard_id):
+    standard = ISOStandard.query.get_or_404(standard_id)
+    
+    if request.method == 'POST':
+        standard.standard_code = request.form['standard_code']
+        standard.title = request.form['title']
+        standard.category = request.form['category']
+        standard.test_type = request.form['test_type']
+        standard.min_threshold = float(request.form['min_threshold']) if request.form['min_threshold'] else None
+        standard.max_threshold = float(request.form['max_threshold']) if request.form['max_threshold'] else None
+        standard.unit = request.form['unit']
+        standard.description = request.form['description']
+        
+        db.session.commit()
+        ActivityLog.log_activity('updated', 'iso_standard', standard.id, f"{standard.standard_code}-{standard.category}", 
+                               f'Updated ISO standard: {standard.title}')
+        flash(f'Norme ISO {standard.standard_code} modifiée avec succès!', 'success')
+        return redirect(url_for('iso_standards_index'))
+    
+    return render_template('config/iso_standards/edit.html', standard=standard)
+
+@app.route('/config/iso-standards/<int:standard_id>/delete', methods=['POST'])
+@login_required
+def delete_iso_standard(standard_id):
+    standard = ISOStandard.query.get_or_404(standard_id)
+    ActivityLog.log_activity('deleted', 'iso_standard', standard.id, f"{standard.standard_code}-{standard.category}", 
+                           f'Deleted ISO standard: {standard.title}')
+    standard.is_active = False
+    db.session.commit()
+    flash(f'Norme ISO {standard.standard_code} supprimée avec succès!', 'success')
+    return redirect(url_for('iso_standards_index'))
+
+@app.route('/config/iso-standards/init-defaults', methods=['POST'])
+@login_required
+def init_default_iso_standards():
+    """Initialize database with default ISO standards"""
+    
+    # Check if standards already exist
+    existing_count = ISOStandard.query.count()
+    if existing_count > 0:
+        flash('Des normes ISO existent déjà dans le système.', 'info')
+        return redirect(url_for('iso_standards_index'))
+    
+    # Create default ISO standards
+    default_standards = [
+        # Dimensional standards
+        ISOStandard(
+            standard_code='ISO 13006',
+            title='Classification des carreaux céramiques - Longueur',
+            category='length',
+            test_type='dimensional',
+            min_threshold=295.0,
+            max_threshold=305.0,
+            unit='mm',
+            description='Tolérance dimensionnelle pour longueur de carreaux 30x30cm (±5mm)'
+        ),
+        ISOStandard(
+            standard_code='ISO 13006',
+            title='Classification des carreaux céramiques - Largeur',
+            category='width',
+            test_type='dimensional',
+            min_threshold=295.0,
+            max_threshold=305.0,
+            unit='mm',
+            description='Tolérance dimensionnelle pour largeur de carreaux 30x30cm (±5mm)'
+        ),
+        ISOStandard(
+            standard_code='ISO 13006',
+            title='Classification des carreaux céramiques - Épaisseur',
+            category='thickness',
+            test_type='dimensional',
+            min_threshold=7.0,
+            max_threshold=13.0,
+            unit='mm',
+            description='Tolérance épaisseur pour carreaux céramiques (7-13mm)'
+        ),
+        ISOStandard(
+            standard_code='ISO 13006',
+            title='Classification des carreaux céramiques - Gauchissement',
+            category='warping',
+            test_type='dimensional',
+            min_threshold=None,
+            max_threshold=2.0,
+            unit='mm',
+            description='Gauchissement maximal autorisé (≤2mm)'
+        ),
+        
+        # Water absorption standards
+        ISOStandard(
+            standard_code='ISO 10545-3',
+            title='Absorption d\'eau - Groupe BIa (Grès cérame)',
+            category='water_absorption',
+            test_type='water_absorption',
+            min_threshold=None,
+            max_threshold=0.5,
+            unit='%',
+            description='Absorption d\'eau pour carreaux grès cérame BIa (≤0.5%)'
+        ),
+        ISOStandard(
+            standard_code='ISO 10545-3',
+            title='Absorption d\'eau - Groupe BIb',
+            category='water_absorption',
+            test_type='water_absorption',
+            min_threshold=0.5,
+            max_threshold=3.0,
+            unit='%',
+            description='Absorption d\'eau pour carreaux grès BIb (0.5-3%)'
+        ),
+        
+        # Breaking strength standards
+        ISOStandard(
+            standard_code='ISO 10545-4',
+            title='Résistance à la rupture - Groupe BIa',
+            category='breaking_strength',
+            test_type='breaking_strength',
+            min_threshold=1300,
+            max_threshold=None,
+            unit='N',
+            description='Force de rupture minimale pour carreaux BIa (≥1300N)'
+        ),
+        ISOStandard(
+            standard_code='ISO 10545-4',
+            title='Résistance à la rupture - Groupe BIb',
+            category='breaking_strength',
+            test_type='breaking_strength',
+            min_threshold=1100,
+            max_threshold=None,
+            unit='N',
+            description='Force de rupture minimale pour carreaux BIb (≥1100N)'
+        ),
+    ]
+    
+    for standard in default_standards:
+        db.session.add(standard)
+    
+    db.session.commit()
+    ActivityLog.log_activity('created', 'iso_standards', None, 'Default Standards', 
+                           f'Initialized {len(default_standards)} default ISO standards')
+    
+    flash(f'{len(default_standards)} normes ISO par défaut créées avec succès!', 'success')
+    return redirect(url_for('iso_standards_index'))

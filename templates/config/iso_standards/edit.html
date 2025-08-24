@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier Norme ISO - Configuration - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-certificate me-2"></i>Modifier Norme ISO - {{ standard.standard_code }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="isoForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="standard_code" class="form-label">Code ISO *</label>
+                                <input type="text" class="form-control" id="standard_code" name="standard_code" 
+                                       required value="{{ standard.standard_code }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="test_type" class="form-label">Type de Test *</label>
+                                <select class="form-select" id="test_type" name="test_type" required onchange="updateCategories()">
+                                    <option value="">Sélectionner un type</option>
+                                    <option value="dimensional" {% if standard.test_type == 'dimensional' %}selected{% endif %}>Test Dimensionnel</option>
+                                    <option value="water_absorption" {% if standard.test_type == 'water_absorption' %}selected{% endif %}>Absorption d'Eau</option>
+                                    <option value="breaking_strength" {% if standard.test_type == 'breaking_strength' %}selected{% endif %}>Résistance à la Rupture</option>
+                                    <option value="abrasion" {% if standard.test_type == 'abrasion' %}selected{% endif %}>Résistance à l'Abrasion</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Titre de la Norme *</label>
+                            <input type="text" class="form-control" id="title" name="title" required
+                                   value="{{ standard.title }}">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="category" class="form-label">Catégorie *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Sélectionner une catégorie</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="unit" class="form-label">Unité</label>
+                                <input type="text" class="form-control" id="unit" name="unit" 
+                                       value="{{ standard.unit or '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="min_threshold" class="form-label">Seuil Minimum</label>
+                                <input type="number" class="form-control" id="min_threshold" name="min_threshold" 
+                                       step="0.01" value="{{ standard.min_threshold or '' }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="max_threshold" class="form-label">Seuil Maximum</label>
+                                <input type="number" class="form-control" id="max_threshold" name="max_threshold" 
+                                       step="0.01" value="{{ standard.max_threshold or '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ standard.description or '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('iso_standards_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Sauvegarder les Modifications
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateCategories() {
+    const testType = document.getElementById('test_type').value;
+    const categorySelect = document.getElementById('category');
+    const currentCategory = '{{ standard.category }}';
+    
+    // Clear existing options
+    categorySelect.innerHTML = '<option value="">Sélectionner une catégorie</option>';
+    
+    const categories = {
+        'dimensional': [
+            {value: 'length', text: 'Longueur'},
+            {value: 'width', text: 'Largeur'},
+            {value: 'thickness', text: 'Épaisseur'},
+            {value: 'warping', text: 'Gauchissement'}
+        ],
+        'water_absorption': [
+            {value: 'water_absorption', text: 'Absorption d\'eau'}
+        ],
+        'breaking_strength': [
+            {value: 'breaking_strength', text: 'Résistance à la rupture'}
+        ],
+        'abrasion': [
+            {value: 'abrasion_resistance', text: 'Résistance à l\'abrasion'}
+        ]
+    };
+    
+    if (testType && categories[testType]) {
+        categories[testType].forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.value;
+            option.textContent = category.text;
+            if (category.value === currentCategory) {
+                option.selected = true;
+            }
+            categorySelect.appendChild(option);
+        });
+    }
+}
+
+// Initialize categories on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateCategories();
+});
+</script>
+{% endblock %}

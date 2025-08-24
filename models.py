@@ -74,6 +74,64 @@ class QualityTest(db.Model):
     batch = db.relationship('ProductionBatch', backref='quality_tests')
     technician = db.relationship('User', backref='conducted_tests')
 
+    def determine_result_automatically(self):
+        """Automatically determine if test passes or fails based on ISO standards"""
+        iso_standards = ISOStandard.query.filter_by(
+            standard_code=self.iso_standard, 
+            is_active=True
+        ).all()
+        
+        if not iso_standards:
+            return None  # Cannot determine without standards
+        
+        failed_tests = 0
+        total_tests = 0
+        
+        for standard in iso_standards:
+            if self.test_type == 'dimensional':
+                if standard.category == 'length' and self.length is not None:
+                    total_tests += 1
+                    if not (standard.min_threshold <= self.length <= standard.max_threshold):
+                        failed_tests += 1
+                elif standard.category == 'width' and self.width is not None:
+                    total_tests += 1
+                    if not (standard.min_threshold <= self.width <= standard.max_threshold):
+                        failed_tests += 1
+                elif standard.category == 'thickness' and self.thickness is not None:
+                    total_tests += 1
+                    if not (standard.min_threshold <= self.thickness <= standard.max_threshold):
+                        failed_tests += 1
+                elif standard.category == 'warping' and self.warping is not None:
+                    total_tests += 1
+                    if self.warping > standard.max_threshold:
+                        failed_tests += 1
+            
+            elif self.test_type == 'water_absorption' and standard.category == 'water_absorption':
+                if self.water_absorption is not None:
+                    total_tests += 1
+                    if self.water_absorption > standard.max_threshold:
+                        failed_tests += 1
+            
+            elif self.test_type == 'breaking_strength' and standard.category == 'breaking_strength':
+                if self.breaking_strength is not None:
+                    total_tests += 1
+                    if self.breaking_strength < standard.min_threshold:
+                        failed_tests += 1
+        
+        if total_tests == 0:
+            return None  # No applicable tests
+        
+        # Calculate compliance score
+        self.compliance_score = ((total_tests - failed_tests) / total_tests) * 100
+        
+        # Determine result: Pass if all tests pass
+        if failed_tests == 0:
+            self.result = 'pass'
+            return 'pass'
+        else:
+            self.result = 'fail'
+            return 'fail'
+
     def __repr__(self):
         return f'<QualityTest {self.test_type} for Batch {self.batch_id}>'
 
@@ -136,17 +194,19 @@ class RawMaterial(db.Model):
 
 class ISOStandard(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    standard_code = db.Column(db.String(20), unique=True, nullable=False)
+    standard_code = db.Column(db.String(20), nullable=False)
     title = db.Column(db.String(200), nullable=False)
-    category = db.Column(db.String(50), nullable=False)
+    category = db.Column(db.String(50), nullable=False)  # length, width, thickness, warping, water_absorption, breaking_strength
+    test_type = db.Column(db.String(50), nullable=False)  # dimensional, water_absorption, breaking_strength, abrasion
     min_threshold = db.Column(db.Float)
     max_threshold = db.Column(db.Float)
     unit = db.Column(db.String(20))
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f'<ISOStandard {self.standard_code}>'
+        return f'<ISOStandard {self.standard_code}-{self.category}>'
 
 class Kiln(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Normes ISO - Configuration - EcoQuality{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-certificate me-2"></i>Configuration des Normes ISO</h2>
+        <a href="{{ url_for('create_iso_standard') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nouvelle Norme
+        </a>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Rechercher</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Code ISO ou titre...">
+                </div>
+                <div class="col-md-4">
+                    <label for="test_type" class="form-label">Type de Test</label>
+                    <select class="form-select" id="test_type" name="test_type">
+                        <option value="">Tous les types</option>
+                        <option value="dimensional" {% if test_type_filter == 'dimensional' %}selected{% endif %}>Dimensionnel</option>
+                        <option value="water_absorption" {% if test_type_filter == 'water_absorption' %}selected{% endif %}>Absorption d'Eau</option>
+                        <option value="breaking_strength" {% if test_type_filter == 'breaking_strength' %}selected{% endif %}>Résistance à la Rupture</option>
+                        <option value="abrasion" {% if test_type_filter == 'abrasion' %}selected{% endif %}>Résistance à l'Abrasion</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-search me-1"></i>Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Standards List -->
+    <div class="card">
+        <div class="card-body">
+            {% if standards %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Code ISO</th>
+                                <th>Titre</th>
+                                <th>Type de Test</th>
+                                <th>Catégorie</th>
+                                <th>Seuils</th>
+                                <th>Unité</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for standard in standards %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary">{{ standard.standard_code }}</span>
+                                </td>
+                                <td>{{ standard.title }}</td>
+                                <td>
+                                    {% if standard.test_type == 'dimensional' %}
+                                        <span class="badge bg-info">Dimensionnel</span>
+                                    {% elif standard.test_type == 'water_absorption' %}
+                                        <span class="badge bg-primary">Absorption d'Eau</span>
+                                    {% elif standard.test_type == 'breaking_strength' %}
+                                        <span class="badge bg-warning">Résistance Rupture</span>
+                                    {% elif standard.test_type == 'abrasion' %}
+                                        <span class="badge bg-success">Abrasion</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ standard.category }}</td>
+                                <td>
+                                    {% if standard.min_threshold is not none and standard.max_threshold is not none %}
+                                        {{ standard.min_threshold }} - {{ standard.max_threshold }}
+                                    {% elif standard.min_threshold is not none %}
+                                        ≥ {{ standard.min_threshold }}
+                                    {% elif standard.max_threshold is not none %}
+                                        ≤ {{ standard.max_threshold }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ standard.unit or '-' }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('edit_iso_standard', standard_id=standard.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form method="POST" 
+                                              action="{{ url_for('delete_iso_standard', standard_id=standard.id) }}" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette norme ISO ?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-certificate fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucune norme ISO configurée</h5>
+                    <p class="text-muted">Commencez par créer votre première norme ISO pour automatiser l'évaluation des tests.</p>
+                    <a href="{{ url_for('create_iso_standard') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Créer une Norme
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('config_index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Retour à la Configuration
+        </a>
+    </div>
+</div>
+{% endblock %}
