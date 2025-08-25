@@ -1,0 +1,330 @@
+# Updated QualityTest model to include laboratory control plan specifications
+
+from sqlalchemy import Column, Integer, Float, String, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy.orm import relationship
+from app import db
+from datetime import datetime
+
+class QualityTest(db.Model):
+    __tablename__ = 'quality_tests'
+    
+    # Basic test information
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('production_batches.id'), nullable=False)
+    sample_id = db.Column(db.String(20), unique=True, nullable=False)
+    test_type = db.Column(db.String(50), nullable=False)
+    test_date = db.Column(db.Date, default=datetime.utcnow().date(), nullable=False)
+    technician_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Standards and methodology
+    iso_standard = db.Column(db.String(100))
+    forming_method = db.Column(db.String(20), default='Pressed')  # Pressed (B) or Extruded (A)
+    surface_type = db.Column(db.String(20), default='glazed')     # glazed or unglazed
+    temperature_humidity = db.Column(db.String(100))              # Test conditions
+    
+    # Dimensional measurements (ISO 10545-2 + Control Plan)
+    length = db.Column(db.Float)                    # mm
+    width = db.Column(db.Float)                     # mm  
+    thickness = db.Column(db.Float)                 # mm
+    straightness = db.Column(db.Float)              # mm - rectitude des arêtes
+    flatness = db.Column(db.Float)                  # mm - planéité
+    
+    # NEW: Additional dimensional parameters per control plan
+    central_curvature = db.Column(db.Float)         # mm - courbure centrale ±0.5% max 2mm
+    lateral_curvature = db.Column(db.Float)         # mm - courbure latérale ±0.5% max 2mm  
+    warp = db.Column(db.Float)                      # mm - voile ±0.5% max 2mm
+    angularity = db.Column(db.Float)                # mm - angularité ±0.5% max 2mm
+    
+    # Water absorption (ISO 10545-3 + Control Plan)
+    water_absorption = db.Column(db.Float)          # % - E > 10% for faïence
+    
+    # Breaking strength (ISO 10545-4 + Control Plan)
+    breaking_force = db.Column(db.Float)            # N - Force de rupture
+    breaking_strength = db.Column(db.Float)         # N/mm² - Module de rupture
+    
+    # Abrasion resistance (ISO 10545-6/7)
+    abrasion_resistance = db.Column(db.String(20))     # PEI classification
+    abrasion_cycles = db.Column(db.Integer)            # Number of test cycles
+    volume_loss = db.Column(db.Float)                  # mm³ for unglazed tiles
+    
+    # Clay testing parameters (R2-MA-LABO-01)
+    clay_humidity_hopper = db.Column(db.Float)         # % - 2.5% ≤ H ≤ 4.1%
+    clay_humidity_sieved = db.Column(db.Float)         # % - 2% ≤ H ≤ 3.5%
+    clay_humidity_silo = db.Column(db.Float)           # % - 5.3% ≤ H ≤ 6.3%
+    clay_humidity_press = db.Column(db.Float)          # % - 5.2% ≤ H ≤ 6%
+    clay_granulometry_refusal = db.Column(db.Float)    # % - 10% ≤ Refus ≤ 20%
+    clay_carbonate_content = db.Column(db.Float)       # % - 15% ≤ CaCO3 ≤ 25%
+    
+    # Thermal shock testing (R2-MA-LABO-04)
+    thermal_shock_resistance = db.Column(db.Boolean)   # Absence of non-visible cracks
+    shrinkage_expansion = db.Column(db.Float)          # % - (-0.2% to +0.4%)
+    loss_on_ignition = db.Column(db.Float)             # % - (10% to 19%)
+    
+    # Glaze testing parameters (R2-MA-LABO-05)
+    glaze_density = db.Column(db.Float)                # g/l - Engobe: 1780-1830, Email: 1730-1780
+    glaze_viscosity = db.Column(db.Float)              # seconds - 25-55 sec
+    glaze_refusal = db.Column(db.Float)                # ml - Tamis 45μ refusal
+    
+    # CETEMCO external testing (ISO 10545-9/11/13/14)
+    thermal_resistance = db.Column(db.String(50))      # Conforme/Non Conforme/En cours
+    chemical_resistance = db.Column(db.String(50))     # ISO 10545-13
+    stain_resistance = db.Column(db.String(50))        # ISO 10545-14
+    
+    # Visual inspection and defects
+    visual_defects = db.Column(db.Text)                # Description of visual defects
+    surface_quality_score = db.Column(db.Float)       # % - 95% min exempt from defects
+    
+    # Test results and evaluation
+    compliance_score = db.Column(db.Float)             # % - Overall compliance score
+    compliance_details = db.Column(db.Text)           # Detailed compliance breakdown
+    result = db.Column(db.String(20), nullable=False) # pass/fail
+    tile_classification = db.Column(db.String(50))    # BIa, BIIa, BIII, etc.
+    
+    # Administrative fields
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    batch = relationship('ProductionBatch', backref='quality_tests')
+    technician = relationship('User', backref='conducted_tests')
+    
+    def __repr__(self):
+        return f'<QualityTest {self.sample_id}: {self.test_type} - {self.result}>'
+    
+    def calculate_flexural_strength_lab_specs(self):
+        """Calculate flexural strength according to laboratory specifications"""
+        if self.breaking_force and self.length and self.width and self.thickness:
+            # Laboratory method: Module de rupture = (3 × F × L) / (2 × b × h²)
+            span_length = self.length * 0.9  # 90% of tile length for span
+            self.breaking_strength = (3 * self.breaking_force * span_length) / (2 * self.width * (self.thickness ** 2))
+    
+    def determine_result_laboratory_specs(self):
+        """Determine test result based on laboratory control plan specifications"""
+        score = 0
+        total_checks = 0
+        compliance_details = []
+        
+        if self.test_type == 'dimensional':
+            # Check dimensional tolerances according to control plan
+            dimensional_checks = [
+                ('length', self.length, 0.5, 2.0),      # ±0.5% max 2mm
+                ('width', self.width, 0.5, 2.0),        # ±0.5% max 2mm
+                ('thickness', self.thickness, 10.0, 0.5), # ±10% max 0.5mm
+                ('straightness', self.straightness, None, 1.5), # max 1.5mm (rectitude arêtes)
+                ('central_curvature', self.central_curvature, None, 2.0), # max 2mm
+                ('lateral_curvature', self.lateral_curvature, None, 2.0), # max 2mm
+                ('warp', self.warp, None, 2.0),          # voile max 2mm
+                ('angularity', self.angularity, None, 2.0) # max 2mm
+            ]
+            
+            for param_name, value, percent_tol, mm_tol in dimensional_checks:
+                if value is not None:
+                    total_checks += 1
+                    is_compliant = True
+                    
+                    if param_name in ['length', 'width']:
+                        # Get nominal dimension from batch or use default
+                        nominal = getattr(self.batch, f'nominal_{param_name}', 200.0)
+                        deviation_percent = abs((value - nominal) / nominal) * 100
+                        deviation_mm = abs(value - nominal)
+                        
+                        if deviation_percent > percent_tol or deviation_mm > mm_tol:
+                            is_compliant = False
+                            
+                        detail = f"{param_name.title()}: {'CONFORME' if is_compliant else 'NON CONFORME'} ({deviation_percent:.2f}%, {deviation_mm:.1f}mm)"
+                        
+                    elif param_name == 'thickness':
+                        nominal = getattr(self.batch, 'nominal_thickness', 7.0)
+                        deviation_percent = abs((value - nominal) / nominal) * 100
+                        deviation_mm = abs(value - nominal)
+                        
+                        if deviation_percent > percent_tol or deviation_mm > mm_tol:
+                            is_compliant = False
+                            
+                        detail = f"Épaisseur: {'CONFORME' if is_compliant else 'NON CONFORME'} ({deviation_percent:.1f}%, {deviation_mm:.2f}mm)"
+                        
+                    else:
+                        # Direct measurement against maximum tolerance
+                        if value > mm_tol:
+                            is_compliant = False
+                            
+                        detail = f"{param_name.replace('_', ' ').title()}: {'CONFORME' if is_compliant else 'NON CONFORME'} ({value:.2f}mm)"
+                    
+                    if is_compliant:
+                        score += 1
+                    compliance_details.append(detail)
+        
+        elif self.test_type == 'water_absorption':
+            if self.water_absorption is not None:
+                total_checks = 1
+                # Control plan: E > 10% for faïence, minimum individual 9%
+                is_compliant = self.water_absorption >= 9.0
+                
+                if is_compliant:
+                    score = 1
+                    if self.water_absorption <= 10.0:
+                        self.tile_classification = "Limite faïence"
+                    elif self.water_absorption <= 20.0:
+                        self.tile_classification = "Faïence standard"
+                    else:
+                        self.tile_classification = "Faïence (indication fabricant requise)"
+                        
+                compliance_details.append(f"Absorption: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.water_absorption:.2f}%)")
+        
+        elif self.test_type == 'breaking_strength':
+            checks_performed = 0
+            
+            if self.breaking_force is not None and self.thickness is not None:
+                total_checks += 1
+                checks_performed += 1
+                
+                # Control plan specifications based on thickness
+                min_force = 600 if self.thickness >= 7.5 else 200  # N
+                is_compliant = self.breaking_force >= min_force
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Force rupture: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.breaking_force:.0f}N vs {min_force}N min)")
+                
+            if self.breaking_strength is not None and self.thickness is not None:
+                total_checks += 1
+                checks_performed += 1
+                
+                # Control plan: ≥7.5mm = min 12 N/mm², <7.5mm = min 15 N/mm²
+                min_modulus = 12 if self.thickness >= 7.5 else 15  # N/mm²
+                is_compliant = self.breaking_strength >= min_modulus
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Module rupture: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.breaking_strength:.1f} vs {min_modulus} N/mm² min)")
+        
+        elif self.test_type == 'clay_testing':
+            # R2-MA-LABO-01 specifications
+            clay_specs = [
+                ('clay_humidity_hopper', self.clay_humidity_hopper, 2.5, 4.1, 'Humidité trémie'),
+                ('clay_humidity_sieved', self.clay_humidity_sieved, 2.0, 3.5, 'Humidité tamisage'),
+                ('clay_humidity_silo', self.clay_humidity_silo, 5.3, 6.3, 'Humidité silo'),
+                ('clay_humidity_press', self.clay_humidity_press, 5.2, 6.0, 'Humidité presse'),
+                ('clay_granulometry_refusal', self.clay_granulometry_refusal, 10.0, 20.0, 'Granulométrie CaCO3'),
+                ('clay_carbonate_content', self.clay_carbonate_content, 15.0, 25.0, 'Teneur CaCO3')
+            ]
+            
+            for param, value, min_val, max_val, label in clay_specs:
+                if value is not None:
+                    total_checks += 1
+                    is_compliant = min_val <= value <= max_val
+                    
+                    if is_compliant:
+                        score += 1
+                        
+                    compliance_details.append(f"{label}: {'CONFORME' if is_compliant else 'NON CONFORME'} ({value:.1f}% [{min_val}-{max_val}%])")
+        
+        elif self.test_type == 'thermal_shock':
+            # R2-MA-LABO-04 specifications
+            if self.thermal_shock_resistance is not None:
+                total_checks += 1
+                if self.thermal_shock_resistance:
+                    score += 1
+                    compliance_details.append("Choc thermique: CONFORME (Absence fissures)")
+                else:
+                    compliance_details.append("Choc thermique: NON CONFORME (Fissures détectées)")
+                    
+            if self.shrinkage_expansion is not None:
+                total_checks += 1
+                is_compliant = -0.2 <= self.shrinkage_expansion <= 0.4
+                if is_compliant:
+                    score += 1
+                compliance_details.append(f"Retrait/Dilatation: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.shrinkage_expansion:.2f}% [-0.2 à +0.4%])")
+                
+            if self.loss_on_ignition is not None:
+                total_checks += 1
+                is_compliant = 10.0 <= self.loss_on_ignition <= 19.0
+                if is_compliant:
+                    score += 1
+                compliance_details.append(f"Perte au feu: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.loss_on_ignition:.1f}% [10-19%])")
+        
+        elif self.test_type == 'glaze_testing':
+            # R2-MA-LABO-05 specifications
+            if self.glaze_density is not None:
+                total_checks += 1
+                # Range varies: Engobe 1780-1830, Email 1730-1780, Mate 1780-1830
+                is_compliant = 1730 <= self.glaze_density <= 1830  # Broad range
+                if is_compliant:
+                    score += 1
+                compliance_details.append(f"Densité émail: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.glaze_density:.0f} g/l)")
+                
+            if self.glaze_viscosity is not None:
+                total_checks += 1
+                is_compliant = 25 <= self.glaze_viscosity <= 55
+                if is_compliant:
+                    score += 1
+                compliance_details.append(f"Viscosité: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.glaze_viscosity:.0f} sec [25-55 sec])")
+                
+            if self.glaze_refusal is not None:
+                total_checks += 1
+                is_compliant = 0.1 <= self.glaze_refusal <= 5.0  # Broad range covering all types
+                if is_compliant:
+                    score += 1
+                compliance_details.append(f"Refus tamis: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.glaze_refusal:.1f} ml)")
+        
+        # Calculate final compliance score and result
+        if total_checks > 0:
+            self.compliance_score = (score / total_checks) * 100
+            self.compliance_details = " | ".join(compliance_details)
+            
+            # Laboratory threshold: 80% compliance for pass
+            return 'pass' if self.compliance_score >= 80.0 else 'fail'
+        
+        return None
+    
+    def get_compliance_summary(self):
+        """Return a formatted compliance summary"""
+        if not self.compliance_details:
+            return "Évaluation non effectuée"
+            
+        details = self.compliance_details.split(" | ")
+        summary = []
+        
+        conforme_count = sum(1 for d in details if "CONFORME" in d and "NON CONFORME" not in d)
+        total_count = len(details)
+        
+        summary.append(f"Score global: {self.compliance_score:.1f}% ({conforme_count}/{total_count})")
+        summary.extend(details)
+        
+        return "\n".join(summary)
+
+
+# Add helper methods to ProductionBatch model for dimensional specifications
+class ProductionBatch(db.Model):
+    # ... existing fields ...
+    
+    def get_nominal_dimension(self, dimension_type):
+        """Get nominal dimension based on product type and format"""
+        # Parse common formats like "20x20", "25x40", "25x50"
+        if hasattr(self, 'product_format') and self.product_format:
+            try:
+                if 'x' in self.product_format:
+                    dims = self.product_format.split('x')
+                    if dimension_type == 'length':
+                        return float(dims[0]) * 10  # Convert cm to mm
+                    elif dimension_type == 'width':
+                        return float(dims[1]) * 10  # Convert cm to mm
+            except (ValueError, IndexError):
+                pass
+        
+        # Default dimensions based on product type
+        format_defaults = {
+            '20x20': {'length': 200.0, 'width': 200.0, 'thickness': 7.0},
+            '25x40': {'length': 250.0, 'width': 400.0, 'thickness': 7.1},
+            '25x50': {'length': 250.0, 'width': 500.0, 'thickness': 7.4}
+        }
+        
+        if self.product_type in format_defaults:
+            return format_defaults[self.product_type].get(dimension_type, 200.0)
+            
+        # Fallback defaults
+        defaults = {'length': 200.0, 'width': 200.0, 'thickness': 7.0}
+        return defaults.get(dimension_type, 200.0)

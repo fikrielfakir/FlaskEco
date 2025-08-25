@@ -1,0 +1,58 @@
+function updateClassification() {
+    const absorption = parseFloat(document.getElementById('water_absorption').value);
+    const formingMethod = document.getElementById('forming_method').value;
+    const classificationDiv = document.getElementById('auto_classification');
+    
+    if (!isNaN(absorption)) {
+        let classification = '';
+        let colorClass = '';
+        
+        // Based on laboratory control plan specifications
+        if (absorption < 9.0) {
+            classification = 'NON CONFORME (< 9% minimum)';
+            colorClass = 'text-danger';
+        } else if (absorption <= 10.0) {
+            classification = 'Limite faïence (conforme)';
+            colorClass = 'text-warning';
+        } else if (absorption <= 20.0) {
+            classification = 'Faïence standard (conforme)';
+            colorClass = 'text-success';
+        } else {
+            classification = 'Faïence - indication fabricant requise (conforme)';
+            colorClass = 'text-info';
+        }
+        
+        classificationDiv.innerHTML = `<span class="${colorClass} fw-bold">${classification}</span>`;
+        classificationDiv.className = `form-control-plaintext fw-bold ${colorClass}`;
+    }
+}
+
+function calculateFlexuralStrength() {
+    const force = parseFloat(document.getElementById('breaking_force').value);
+    const length = parseFloat(document.getElementById('tile_length').value);
+    const width = parseFloat(document.getElementById('tile_width').value);
+    const thickness = parseFloat(document.getElementById('tile_thickness').value);
+    const autoCalc = document.getElementById('auto_calculate_strength').checked;
+    
+    if (autoCalc && force && length && width && thickness) {
+        // Laboratory method: Module de rupture = (3 × F × L) / (2 × b × h²)
+        const spanLength = length * 0.9; // 90% of tile length for span
+        const flexuralStrength = (3 * force * spanLength) / (2 * width * Math.pow(thickness, 2));
+        
+        document.getElementById('breaking_strength').value = flexuralStrength.toFixed(2);
+        
+        // Visual feedback based on laboratory specifications
+        const strengthInput = document.getElementById('breaking_strength');
+        const minModulus = thickness >= 7.5 ? 12 : 15; // Laboratory specs
+        
+        if (flexuralStrength >= minModulus) {
+            strengthInput.className = 'form-control border-success';
+            strength                                <div class="alert alert-info">
+                                    <strong>Spécifications dimensionnelles (selon plan de contrôle):</strong><br/>
+                                    • <strong>Longueur/Largeur:</strong> ±0.5% (max 2mm)<br/>
+                                    • <strong>Épaisseur:</strong> ±10% (±0.5mm)<br/>
+                                    • <strong>Rectitude des arêtes:</strong> ±0.3% (max 1.5mm)<br/>
+                                    • <strong>Courbure centrale/latérale:</strong> ±0.5% (max 2mm)<br/>
+                                    • <strong>Voile:</strong> ±0.5% (max 2mm)<br/>
+                                    • <strong>Angularité:</strong> ±0.5% (max 2mm)
+                                </div>
