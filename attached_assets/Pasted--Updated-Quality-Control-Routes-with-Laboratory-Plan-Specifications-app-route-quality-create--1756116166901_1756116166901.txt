@@ -1,0 +1,326 @@
+# Updated Quality Control Routes with Laboratory Plan Specifications
+
+@app.route('/quality/create', methods=['GET', 'POST'])
+@login_required
+def create_test():
+    if request.method == 'POST':
+        # Generate sample ID automatically
+        today = datetime.now()
+        sample_prefix = f"SAMP{today.strftime('%Y%m%d')}"
+        last_sample = QualityTest.query.filter(QualityTest.sample_id.like(f"{sample_prefix}%")).order_by(QualityTest.id.desc()).first()
+        
+        if last_sample and last_sample.sample_id:
+            last_num = int(last_sample.sample_id[-3:])
+            sample_id = f"{sample_prefix}{str(last_num + 1).zfill(3)}"
+        else:
+            sample_id = f"{sample_prefix}001"
+        
+        test = QualityTest()
+        test.batch_id = int(request.form['batch_id'])
+        test.test_type = request.form['test_type']
+        test.technician_id = current_user.id
+        test.sample_id = sample_id
+        test.iso_standard = request.form['iso_standard']
+        test.forming_method = request.form.get('forming_method', 'Pressed')
+        test.surface_type = request.form.get('surface_type', 'glazed')
+        test.temperature_humidity = request.form.get('temperature_humidity', '')
+        test.notes = request.form['notes']
+        
+        # Set measurements based on test type with laboratory specifications
+        if request.form['test_type'] == 'dimensional':
+            test.length = float(request.form['length']) if request.form['length'] else None
+            test.width = float(request.form['width']) if request.form['width'] else None
+            test.thickness = float(request.form['thickness']) if request.form['thickness'] else None
+            test.straightness = float(request.form['straightness']) if request.form['straightness'] else None
+            test.flatness = float(request.form['flatness']) if request.form['flatness'] else None
+            
+            # New fields based on laboratory control plan
+            test.central_curvature = float(request.form['central_curvature']) if request.form['central_curvature'] else None
+            test.lateral_curvature = float(request.form['lateral_curvature']) if request.form['lateral_curvature'] else None
+            test.warp = float(request.form['warp']) if request.form['warp'] else None
+            test.angularity = float(request.form['angularity']) if request.form['angularity'] else None
+            
+        elif request.form['test_type'] == 'water_absorption':
+            test.water_absorption = float(request.form['water_absorption']) if request.form['water_absorption'] else None
+            
+        elif request.form['test_type'] == 'breaking_strength':
+            test.breaking_force = float(request.form['breaking_force']) if request.form['breaking_force'] else None
+            
+            # Calculate based on laboratory specifications
+            if test.breaking_force and request.form.get('auto_calculate_strength') == 'on':
+                test.length = float(request.form['tile_length']) if request.form['tile_length'] else None
+                test.width = float(request.form['tile_width']) if request.form['tile_width'] else None  
+                test.thickness = float(request.form['tile_thickness']) if request.form['tile_thickness'] else None
+                test.calculate_flexural_strength_lab_specs()
+            else:
+                test.breaking_strength = float(request.form['breaking_strength']) if request.form['breaking_strength'] else None
+                
+        elif request.form['test_type'] == 'clay_testing':
+            # Clay humidity tests according to R2-MA-LABO-01
+            test.clay_humidity_hopper = float(request.form['clay_humidity_hopper']) if request.form['clay_humidity_hopper'] else None
+            test.clay_humidity_sieved = float(request.form['clay_humidity_sieved']) if request.form['clay_humidity_sieved'] else None
+            test.clay_humidity_silo = float(request.form['clay_humidity_silo']) if request.form['clay_humidity_silo'] else None
+            test.clay_humidity_press = float(request.form['clay_humidity_press']) if request.form['clay_humidity_press'] else None
+            test.clay_granulometry_refusal = float(request.form['clay_granulometry_refusal']) if request.form['clay_granulometry_refusal'] else None
+            test.clay_carbonate_content = float(request.form['clay_carbonate_content']) if request.form['clay_carbonate_content'] else None
+            
+        elif request.form['test_type'] == 'thermal_shock':
+            # According to R2-MA-LABO-04
+            test.thermal_shock_resistance = request.form.get('thermal_shock_resistance') == 'on'
+            test.shrinkage_expansion = float(request.form['shrinkage_expansion']) if request.form['shrinkage_expansion'] else None
+            test.loss_on_ignition = float(request.form['loss_on_ignition']) if request.form['loss_on_ignition'] else None
+            
+        elif request.form['test_type'] == 'glaze_testing':
+            # According to R2-MA-LABO-05
+            test.glaze_density = float(request.form['glaze_density']) if request.form['glaze_density'] else None
+            test.glaze_viscosity = float(request.form['glaze_viscosity']) if request.form['glaze_viscosity'] else None
+            test.glaze_refusal = float(request.form['glaze_refusal']) if request.form['glaze_refusal'] else None
+            
+        elif request.form['test_type'] == 'cetemco_testing':
+            # CETEMCO external tests according to ISO 10545-9/11/13/14
+            test.thermal_resistance = request.form.get('thermal_resistance', '')
+            test.chemical_resistance = request.form.get('chemical_resistance', '')
+            test.stain_resistance = request.form.get('stain_resistance', '')
+        
+        test.visual_defects = request.form['visual_defects']
+        
+        # Automatic evaluation based on laboratory specifications
+        auto_result = test.determine_result_laboratory_specs()
+        if auto_result and not request.form.get('manual_override'):
+            test.result = auto_result
+            classification_info = f" | Classification: {test.tile_classification}" if test.tile_classification else ""
+            ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
+                                   f'Test évalué selon spécifications labo: {auto_result.upper()} (Score: {test.compliance_score:.1f}%){classification_info}')
+        else:
+            test.compliance_score = float(request.form['compliance_score']) if request.form['compliance_score'] else None
+            test.result = request.form['result']
+            test.tile_classification = request.form.get('tile_classification', '')
+            ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
+                                   f'Test manuellement évalué: {test.result.upper()}')
+        
+        db.session.add(test)
+        db.session.commit()
+        
+        result_text = 'Conforme (Pass)' if test.result == 'pass' else 'Non Conforme (Fail)'
+        classification_text = f" - Classification: {test.tile_classification}" if test.tile_classification else ""
+        flash(f'Test de qualité créé selon plan de contrôle! Échantillon: {sample_id} | Résultat: {result_text}{classification_text}', 
+              'success' if test.result == 'pass' else 'warning')
+        return redirect(url_for('quality_index'))
+    
+    batches = ProductionBatch.query.filter_by(status='completed').all()
+    iso_standards = {
+        'dimensional': 'ISO 10545-2 + Plan de Contrôle',
+        'water_absorption': 'ISO 10545-3 + Plan de Contrôle', 
+        'breaking_strength': 'ISO 10545-4 + Plan de Contrôle',
+        'abrasion': 'ISO 10545-6',
+        'clay_testing': 'R2-MA-LABO-01',
+        'thermal_shock': 'R2-MA-LABO-04',
+        'glaze_testing': 'R2-MA-LABO-05',
+        'cetemco_testing': 'ISO 10545-9/11/13/14'
+    }
+    return render_template('quality/create_test.html', batches=batches, iso_standards=iso_standards)
+
+
+# Updated QualityTest model methods to handle laboratory specifications
+def calculate_flexural_strength_lab_specs(self):
+    """Calculate flexural strength according to laboratory specifications"""
+    if self.breaking_force and self.length and self.width and self.thickness:
+        # Use laboratory method: Module de rupture = (3 × F × L) / (2 × b × h²)
+        span_length = self.length * 0.9  # 90% of tile length
+        self.breaking_strength = (3 * self.breaking_force * span_length) / (2 * self.width * (self.thickness ** 2))
+
+def determine_result_laboratory_specs(self):
+    """Determine test result based on laboratory control plan specifications"""
+    score = 0
+    total_checks = 0
+    compliance_details = []
+    
+    if self.test_type == 'dimensional':
+        if self.length is not None:
+            total_checks += 1
+            # According to control plan: ±0.5% max 2mm
+            tolerance_percent = 0.5
+            tolerance_mm = 2.0
+            nominal_length = self.batch.get_nominal_dimension('length') or 200  # Default 20cm
+            
+            deviation_percent = abs((self.length - nominal_length) / nominal_length) * 100
+            deviation_mm = abs(self.length - nominal_length)
+            
+            if deviation_percent <= tolerance_percent and deviation_mm <= tolerance_mm:
+                score += 1
+                compliance_details.append(f"Longueur: CONFORME ({deviation_percent:.2f}%, {deviation_mm:.1f}mm)")
+            else:
+                compliance_details.append(f"Longueur: NON CONFORME ({deviation_percent:.2f}%, {deviation_mm:.1f}mm)")
+                
+        if self.width is not None:
+            total_checks += 1
+            # Same specifications as length
+            tolerance_percent = 0.5
+            tolerance_mm = 2.0
+            nominal_width = self.batch.get_nominal_dimension('width') or 200
+            
+            deviation_percent = abs((self.width - nominal_width) / nominal_width) * 100
+            deviation_mm = abs(self.width - nominal_width)
+            
+            if deviation_percent <= tolerance_percent and deviation_mm <= tolerance_mm:
+                score += 1
+                compliance_details.append(f"Largeur: CONFORME ({deviation_percent:.2f}%, {deviation_mm:.1f}mm)")
+            else:
+                compliance_details.append(f"Largeur: NON CONFORME ({deviation_percent:.2f}%, {deviation_mm:.1f}mm)")
+                
+        if self.thickness is not None:
+            total_checks += 1
+            # According to control plan: ±10% ±0.5mm
+            tolerance_percent = 10.0
+            tolerance_mm = 0.5
+            nominal_thickness = self.batch.get_nominal_dimension('thickness') or 7.0
+            
+            deviation_percent = abs((self.thickness - nominal_thickness) / nominal_thickness) * 100
+            deviation_mm = abs(self.thickness - nominal_thickness)
+            
+            if deviation_percent <= tolerance_percent and deviation_mm <= tolerance_mm:
+                score += 1
+                compliance_details.append(f"Épaisseur: CONFORME ({deviation_percent:.1f}%, {deviation_mm:.2f}mm)")
+            else:
+                compliance_details.append(f"Épaisseur: NON CONFORME ({deviation_percent:.1f}%, {deviation_mm:.2f}mm)")
+                
+        if self.straightness is not None:
+            total_checks += 1
+            # Rectitude des arêtes: ±0.3% max 1.5mm
+            if self.straightness <= 1.5:
+                score += 1
+                compliance_details.append(f"Rectitude: CONFORME ({self.straightness:.2f}mm)")
+            else:
+                compliance_details.append(f"Rectitude: NON CONFORME ({self.straightness:.2f}mm)")
+                
+        # Check new dimensional parameters
+        for param, value, spec_mm in [
+            ('central_curvature', self.central_curvature, 2.0),
+            ('lateral_curvature', self.lateral_curvature, 2.0),
+            ('warp', self.warp, 2.0),
+            ('angularity', self.angularity, 2.0)
+        ]:
+            if value is not None:
+                total_checks += 1
+                if value <= spec_mm:
+                    score += 1
+                    compliance_details.append(f"{param.replace('_', ' ').title()}: CONFORME ({value:.2f}mm)")
+                else:
+                    compliance_details.append(f"{param.replace('_', ' ').title()}: NON CONFORME ({value:.2f}mm)")
+    
+    elif self.test_type == 'water_absorption':
+        if self.water_absorption is not None:
+            total_checks = 1
+            # According to control plan: E > 10% (faïence), minimum individual value 9%
+            if self.water_absorption >= 9.0:
+                score = 1
+                if self.water_absorption <= 10.0:
+                    self.tile_classification = "Limite faïence"
+                elif self.water_absorption <= 20.0:
+                    self.tile_classification = "Faïence standard"
+                else:
+                    self.tile_classification = "Faïence (indication fabricant requise)"
+                    
+                compliance_details.append(f"Absorption: CONFORME ({self.water_absorption:.2f}%) - {self.tile_classification}")
+            else:
+                compliance_details.append(f"Absorption: NON CONFORME ({self.water_absorption:.2f}%) - Sous le minimum")
+    
+    elif self.test_type == 'breaking_strength':
+        if self.breaking_force is not None and self.thickness is not None:
+            total_checks += 1
+            # According to control plan specifications
+            if self.thickness >= 7.5:
+                min_force = 600  # N
+                min_modulus = 12  # N/mm²
+            else:
+                min_force = 200  # N  
+                min_modulus = 15  # N/mm²
+                
+            if self.breaking_force >= min_force:
+                score += 1
+                compliance_details.append(f"Force rupture: CONFORME ({self.breaking_force:.0f}N ≥ {min_force}N)")
+            else:
+                compliance_details.append(f"Force rupture: NON CONFORME ({self.breaking_force:.0f}N < {min_force}N)")
+                
+        if self.breaking_strength is not None and self.thickness is not None:
+            total_checks += 1
+            min_modulus = 12 if self.thickness >= 7.5 else 15
+            
+            if self.breaking_strength >= min_modulus:
+                score += 1
+                compliance_details.append(f"Module rupture: CONFORME ({self.breaking_strength:.1f} ≥ {min_modulus} N/mm²)")
+            else:
+                compliance_details.append(f"Module rupture: NON CONFORME ({self.breaking_strength:.1f} < {min_modulus} N/mm²)")
+    
+    elif self.test_type == 'clay_testing':
+        # Check humidity at different stages according to R2-MA-LABO-01
+        clay_checks = [
+            ('humidity_hopper', self.clay_humidity_hopper, 2.5, 4.1),
+            ('humidity_sieved', self.clay_humidity_sieved, 2.0, 3.5),
+            ('humidity_silo', self.clay_humidity_silo, 5.3, 6.3),
+            ('humidity_press', self.clay_humidity_press, 5.2, 6.0),
+            ('granulometry_refusal', self.clay_granulometry_refusal, 10.0, 20.0),
+            ('carbonate_content', self.clay_carbonate_content, 15.0, 25.0)
+        ]
+        
+        for name, value, min_val, max_val in clay_checks:
+            if value is not None:
+                total_checks += 1
+                if min_val <= value <= max_val:
+                    score += 1
+                    compliance_details.append(f"{name.replace('_', ' ').title()}: CONFORME ({value:.1f}%)")
+                else:
+                    compliance_details.append(f"{name.replace('_', ' ').title()}: NON CONFORME ({value:.1f}%)")
+                    
+    elif self.test_type == 'thermal_shock':
+        # According to R2-MA-LABO-04
+        if self.thermal_shock_resistance is not None:
+            total_checks += 1
+            if self.thermal_shock_resistance:
+                score += 1
+                compliance_details.append("Choc thermique: CONFORME (Absence fissures)")
+            else:
+                compliance_details.append("Choc thermique: NON CONFORME (Fissures détectées)")
+                
+        if self.shrinkage_expansion is not None:
+            total_checks += 1
+            if -0.2 <= self.shrinkage_expansion <= 0.4:
+                score += 1
+                compliance_details.append(f"Retrait/Dilatation: CONFORME ({self.shrinkage_expansion:.2f}%)")
+            else:
+                compliance_details.append(f"Retrait/Dilatation: NON CONFORME ({self.shrinkage_expansion:.2f}%)")
+                
+        if self.loss_on_ignition is not None:
+            total_checks += 1
+            if 10.0 <= self.loss_on_ignition <= 19.0:
+                score += 1
+                compliance_details.append(f"Perte au feu: CONFORME ({self.loss_on_ignition:.1f}%)")
+            else:
+                compliance_details.append(f"Perte au feu: NON CONFORME ({self.loss_on_ignition:.1f}%)")
+    
+    elif self.test_type == 'glaze_testing':
+        # According to R2-MA-LABO-05
+        glaze_checks = [
+            ('density', self.glaze_density, 1730, 1830),  # Range for different types
+            ('viscosity', self.glaze_viscosity, 25, 55),
+            ('refusal', self.glaze_refusal, 0.1, 5.0)  # Range varies by type
+        ]
+        
+        for name, value, min_val, max_val in glaze_checks:
+            if value is not None:
+                total_checks += 1
+                if min_val <= value <= max_val:
+                    score += 1
+                    compliance_details.append(f"Email {name}: CONFORME ({value:.1f})")
+                else:
+                    compliance_details.append(f"Email {name}: NON CONFORME ({value:.1f})")
+    
+    # Calculate compliance score and determine result
+    if total_checks > 0:
+        self.compliance_score = (score / total_checks) * 100
+        self.compliance_details = " | ".join(compliance_details)
+        
+        # Pass if 80% or more checks pass (configurable threshold)
+        return 'pass' if self.compliance_score >= 80 else 'fail'
+    
+    return None

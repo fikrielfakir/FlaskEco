@@ -33,7 +33,7 @@ db.init_app(app)
 # Setup Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'login'  # type: ignore
 login_manager.login_message = 'Veuillez vous connecter pour accéder à cette page.'
 
 @login_manager.user_loader

@@ -1,0 +1,175 @@
+# Database migration script to add laboratory control plan fields
+# Run this script to update your existing database schema
+
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
+import sys
+
+def add_laboratory_control_fields():
+    """Add new fields required by laboratory control plan specifications"""
+    
+    migration_queries = [
+        # Add new dimensional measurement fields
+        "ALTER TABLE quality_tests ADD COLUMN central_curvature FLOAT NULL COMMENT 'Courbure centrale (mm) - ±0.5% max 2mm'",
+        "ALTER TABLE quality_tests ADD COLUMN lateral_curvature FLOAT NULL COMMENT 'Courbure latérale (mm) - ±0.5% max 2mm'",
+        "ALTER TABLE quality_tests ADD COLUMN warp FLOAT NULL COMMENT 'Voile (mm) - ±0.5% max 2mm'", 
+        "ALTER TABLE quality_tests ADD COLUMN angularity FLOAT NULL COMMENT 'Angularité (mm) - ±0.5% max 2mm'",
+        
+        # Add surface quality assessment
+        "ALTER TABLE quality_tests ADD COLUMN surface_quality_score FLOAT NULL COMMENT 'Qualité de surface (%) - min 95% exempt de défauts'",
+        
+        # Add detailed compliance tracking
+        "ALTER TABLE quality_tests ADD COLUMN compliance_details TEXT NULL COMMENT 'Détail de conformité par paramètre'",
+        
+        # Add tile classification field
+        "ALTER TABLE quality_tests ADD COLUMN tile_classification VARCHAR(50) NULL COMMENT 'Classification selon absorption: BIa, BIIa, BIII, etc.'",
+        
+        # Add nominal dimensions to production batch for reference
+        "ALTER TABLE production_batches ADD COLUMN product_format VARCHAR(20) NULL COMMENT 'Format produit: 20x20, 25x40, 25x50'",
+        "ALTER TABLE production_batches ADD COLUMN nominal_length FLOAT NULL COMMENT 'Longueur nominale (mm)'",
+        "ALTER TABLE production_batches ADD COLUMN nominal_width FLOAT NULL COMMENT 'Largeur nominale (mm)'", 
+        "ALTER TABLE production_batches ADD COLUMN nominal_thickness FLOAT NULL COMMENT 'Épaisseur nominale (mm)'",
+        
+        # Update existing ISO standards to reflect laboratory specifications
+        "UPDATE quality_tests SET iso_standard = CONCAT(iso_standard, ' + Plan de Contrôle') WHERE test_type IN ('dimensional', 'water_absorption', 'breaking_strength') AND iso_standard NOT LIKE '%Plan de Contrôle%'"
+    ]
+    
+    try:
+        for query in migration_queries:
+            try:
+                db.session.execute(text(query))
+                print(f"✓ Executed: {query[:80]}...")
+            except Exception as e:
+                if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                    print(f"⚠ Column already exists, skipping: {query[:50]}...")
+                else:
+                    print(f"✗ Error executing query: {query[:50]}...")
+                    print(f"  Error: {e}")
+                    
+        db.session.commit()
+        print("\n✅ Database migration completed successfully!")
+        print("\nNew fields added:")
+        print("• central_curvature - Courbure centrale selon plan de contrôle")
+        print("• lateral_curvature - Courbure latérale selon plan de contrôle") 
+        print("• warp - Voile selon plan de contrôle")
+        print("• angularity - Angularité selon plan de contrôle")
+        print("• surface_quality_score - Score qualité de surface (min 95%)")
+        print("• compliance_details - Détails de conformité par paramètre")
+        print("• tile_classification - Classification selon absorption d'eau")
+        print("• product_format - Format produit dans production_batches")
+        print("• nominal dimensions - Dimensions nominales de référence")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Migration failed: {e}")
+        sys.exit(1)
+
+def populate_default_formats():
+    """Populate default product formats based on existing product types"""
+    
+    format_mapping = {
+        '20x20': {'format': '20x20', 'length': 200.0, 'width': 200.0, 'thickness': 7.0},
+        '25x40': {'format': '25x40', 'length': 250.0, 'width': 400.0, 'thickness': 7.1}, 
+        '25x50': {'format': '25x50', 'length': 250.0, 'width': 500.0, 'thickness': 7.4}
+    }
+    
+    try:
+        from models import ProductionBatch
+        
+        batches = ProductionBatch.query.all()
+        updated_count = 0
+        
+        for batch in batches:
+            for format_key, specs in format_mapping.items():
+                if format_key in batch.product_type.lower():
+                    batch.product_format = specs['format']
+                    batch.nominal_length = specs['length']
+                    batch.nominal_width = specs['width'] 
+                    batch.nominal_thickness = specs['thickness']
+                    updated_count += 1
+                    break
+        
+        db.session.commit()
+        print(f"✅ Updated {updated_count} production batches with nominal dimensions")
+        
+    except Exception as e:
+        print(f"⚠ Could not populate default formats: {e}")
+
+def update_iso_standards_with_lab_specs():
+    """Update existing ISO standards to include laboratory specifications"""
+    
+    lab_standards_updates = [
+        # Dimensional tolerances per control plan
+        ("ISO 10545-2", "dimensional", "length_tolerance", -0.5, 0.5, "%", "Tolérance longueur selon plan de contrôle: ±0.5% max 2mm"),
+        ("ISO 10545-2", "dimensional", "width_tolerance", -0.5, 0.5, "%", "Tolérance largeur selon plan de contrôle: ±0.5% max 2mm"),
+        ("ISO 10545-2", "dimensional", "thickness_tolerance", -10.0, 10.0, "%", "Tolérance épaisseur selon plan de contrôle: ±10% max 0.5mm"),
+        ("ISO 10545-2", "dimensional", "straightness_edges", None, 1.5, "mm", "Rectitude des arêtes selon plan de contrôle: max 1.5mm"),
+        ("ISO 10545-2", "dimensional", "central_curvature", None, 2.0, "mm", "Courbure centrale selon plan de contrôle: max 2mm"),
+        ("ISO 10545-2", "dimensional", "lateral_curvature", None, 2.0, "mm", "Courbure latérale selon plan de contrôle: max 2mm"),
+        ("ISO 10545-2", "dimensional", "warp", None, 2.0, "mm", "Voile selon plan de contrôle: max 2mm"),
+        ("ISO 10545-2", "dimensional", "angularity", None, 2.0, "mm", "Angularité selon plan de contrôle: max 2mm"),
+        
+        # Water absorption per control plan
+        ("ISO 10545-3", "water_absorption", "faience_minimum", 9.0, None, "%", "Absorption minimale individuelle selon plan de contrôle: 9%"),
+        ("ISO 10545-3", "water_absorption", "faience_standard", 10.0, 20.0, "%", "Faïence standard selon plan de contrôle: E > 10%"),
+        
+        # Breaking strength per control plan
+        ("ISO 10545-4", "breaking_strength", "force_thick", 600, None, "N", "Force rupture épaisseur ≥7.5mm selon plan: min 600N"),
+        ("ISO 10545-4", "breaking_strength", "force_thin", 200, None, "N", "Force rupture épaisseur <7.5mm selon plan: min 200N"),
+        ("ISO 10545-4", "breaking_strength", "modulus_thick", 12, None, "N/mm²", "Module rupture épaisseur ≥7.5mm selon plan: min 12 N/mm²"),
+        ("ISO 10545-4", "breaking_strength", "modulus_thin", 15, None, "N/mm²", "Module rupture épaisseur <7.5mm selon plan: min 15 N/mm²"),
+    ]
+    
+    try:
+        from models import ISOStandard
+        
+        for standard_code, test_type, category, min_thresh, max_thresh, unit, description in lab_standards_updates:
+            # Check if standard already exists
+            existing = ISOStandard.query.filter_by(
+                standard_code=standard_code,
+                test_type=test_type,
+                category=category
+            ).first()
+            
+            if not existing:
+                new_standard = ISOStandard(
+                    standard_code=standard_code,
+                    title=description,
+                    category=category,
+                    test_type=test_type,
+                    min_threshold=min_thresh,
+                    max_threshold=max_thresh,
+                    unit=unit,
+                    description=description
+                )
+                db.session.add(new_standard)
+        
+        db.session.commit()
+        print("✅ Updated ISO standards with laboratory control plan specifications")
+        
+    except Exception as e:
+        print(f"⚠ Could not update ISO standards: {e}")
+
+if __name__ == "__main__":
+    # This script should be run in the context of your Flask app
+    print("🔄 Starting database migration for laboratory control plan specifications...\n")
+    
+    add_laboratory_control_fields()
+    populate_default_formats() 
+    update_iso_standards_with_lab_specs()
+    
+    print("\n🎯 Migration Summary:")
+    print("✅ Added dimensional measurement fields per control plan")
+    print("✅ Added surface quality assessment capabilities")
+    print("✅ Added detailed compliance tracking")
+    print("✅ Added tile classification based on absorption")
+    print("✅ Added nominal dimensions for reference")
+    print("✅ Updated ISO standards with laboratory specifications")
+    
+    print("\n📋 Next Steps:")
+    print("1. Restart your Flask application")
+    print("2. Test the new quality control forms")
+    print("3. Verify automatic evaluation against laboratory specifications")
+    print("4. Update existing test records as needed")
+    print("5. Train staff on new compliance evaluation criteria")
