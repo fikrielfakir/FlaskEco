@@ -445,30 +445,28 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="compliance_score" class="form-label">Score de Conformité (%)</label>
                                         <input type="number" class="form-control" id="compliance_score" name="compliance_score" 
-                                               step="0.1" min="0" max="100" placeholder="Calculé automatiquement">
-                                        <div class="form-text">Sera calculé automatiquement selon les normes ISO</div>
+                                               step="0.1" min="0" max="100" placeholder="Calculé automatiquement" disabled readonly>
+                                        <div class="form-text text-success"><i class="fas fa-magic me-1"></i>Calculé automatiquement selon les spécifications du laboratoire</div>
                                     </div>
                                     
                                     <div class="col-md-6 mb-3">
                                         <label for="result" class="form-label">Résultat du Test *</label>
-                                        <select class="form-select" id="result" name="result" required>
-                                            <option value="">Évaluation automatique</option>
-                                            <option value="pass" class="text-success">Conforme</option>
-                                            <option value="fail" class="text-danger">Non Conforme</option>
+                                        <select class="form-select" id="result" name="result" disabled readonly>
+                                            <option value="">Déterminé automatiquement</option>
+                                            <option value="pass" class="text-success">✓ Conforme</option>
+                                            <option value="fail" class="text-danger">✗ Non Conforme</option>
                                         </select>
-                                        <div class="form-text">
-                                            <i class="fas fa-magic me-1 text-success"></i>Évaluation automatique selon ISO 10545
+                                        <div class="form-text text-success">
+                                            <i class="fas fa-robot me-1"></i>Évaluation automatique selon plan de contrôle laboratoire
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Manual Override -->
+                                <!-- Automatic Evaluation Notice -->
                                 <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="manual_override" name="manual_override">
-                                        <label class="form-check-label" for="manual_override">
-                                            <i class="fas fa-user-edit me-1"></i>Saisie manuelle (désactiver l'évaluation automatique)
-                                        </label>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Évaluation Automatique:</strong> Le résultat (Conforme/Non Conforme) est déterminé automatiquement selon les spécifications exactes du plan de contrôle laboratoire. Aucune saisie manuelle n'est nécessaire.
                                     </div>
                                 </div>
                                 
@@ -607,27 +605,8 @@ document.getElementById('auto_calculate_strength').addEventListener('change', fu
     }
 });
 
-// Handle manual override checkbox
-document.getElementById('manual_override').addEventListener('change', function() {
-    const resultSelect = document.getElementById('result');
-    const complianceInput = document.getElementById('compliance_score');
-    
-    if (this.checked) {
-        resultSelect.style.borderColor = '#ffc107';
-        complianceInput.style.borderColor = '#ffc107';
-        complianceInput.readOnly = false;
-        complianceInput.placeholder = 'Entrer manuellement';
-        resultSelect.parentElement.querySelector('.form-text').innerHTML = 
-            '<i class="fas fa-exclamation-triangle me-1 text-warning"></i>Mode manuel - évaluation automatique désactivée';
-    } else {
-        resultSelect.style.borderColor = '';
-        complianceInput.style.borderColor = '';
-        complianceInput.readOnly = true;
-        complianceInput.placeholder = 'Calculé automatiquement';
-        resultSelect.parentElement.querySelector('.form-text').innerHTML = 
-            '<i class="fas fa-magic me-1 text-success"></i>Évaluation automatique selon ISO 10545';
-    }
-});
+// Automatic evaluation - no manual override allowed
+// Result and compliance score are always determined automatically
 
 // Initialize form
 document.addEventListener('DOMContentLoaded', function() {
@@ -638,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('testForm');
     form.addEventListener('submit', function(e) {
         const testType = document.getElementById('test_type').value;
-        const manualOverride = document.getElementById('manual_override').checked;
+        const manualOverride = false; // Always automatic evaluation
         
         if (!manualOverride && testType) {
             // Show processing indicator

@@ -1,0 +1,176 @@
+FOUR EMAIL	Carreau émaillé	Choc thermique	Manuel	Absence de fissure non visuelle ≤5% Voir   	
+
+
+
+Contrôleur
+	6 fois / jour	R2_F15_Labo
+		Résistance à la rupture  &  Module de rupture	Machine de flexion
+	1- Résistance à la rupture en (N)  
+  
+  Epaisseur   ≥  7.5 mm,  Minimum 600
+
+  Epaisseur   < 7.5 mm,  Minimum 200
+
+2- Module de rupture , en N/mm²  
+
+  Epaisseur   ≥  7.5 mm,  Minimum 12
+
+  Epaisseur   < 7.5 mm,  Minimum 15
+
+		1 fois / jour	R2_F7_Labo
+		Caractéristiques dimensionnelles : Longueur  & Largeur 	Pied à coulisse	Ecart 1 max % : ± 0,5 ; 2 mm
+		1 fois / jour	R2_F20_Labo
+		Caractéristiques dimensionnelles : Epaisseur 
+	Pied à coulisse	Ecart % : ± 10 % ; ± 0,5 mm		1 fois / jour	R2_F20_Labo
+		Absorption d’eau en %	Balance	E > 10
+Quand la valeur dépasse 20 % elle doit être indiquée par le
+fabricant
+Valeur individuelle minimale 9 %	Contrôleur/
+ISO 10545-3	1 fois/jour	R2_F8_Labo
+		Nuance des couleurs (Tonalité)
+Cuisson  
+Planéité 	Visuel	≤ 1%
+≤ 1%
+Absence de planéité≤ 5 %	Contrôleur/
+ISO 10545-2	6 fois / jour	R2_F15_Labo
+		RESULTAS DES ESSAIS DIMENTIONNELS ET QUALITE DE SURFACE :
+1- Courbure centrale
+2-  Voile
+3- Angularité
+4- Rectitude des arrêtes
+5- Courbure latérale
+	Table	1- Courbure centrale
+±0.5 %      ±2mm		1 fois/jour
+
+	R2-F23-LABO
+			Table	2-  Voile
+± 0.5 % ----± 2mm		1 fois/ jour             	R2-F23-LABO
+			Table	3- Angularité
+± 0.5 % ----± 2mm		1 fois / jour	R2-F23-LABO
+			Table	4- Rectitude des arrêtes
+± 0.3 % ----± 1.5mm		1 fois / jour	R2-F23-LABO
+			Table	5- Courbure latérale
+±0.5 %      ±2mm		1 fois / jour	R2-F23-LABO
+		Qualité de surface
+
+
+
+
+	Luxmètre
+Eclairage :
+± 300 lux
+
+
+	95% au moins des carreaux doivent être exempts de défauts  visibles susceptibles de nuire à l’aspect d’une zone importante du carrelage
+
+		Au moins 1m² et au moins 30 carreaux
+
+
+	R2-F23-LABO
+
+
+
+
+
+		Essais physiques : 
+
+Résistance au tressaillage  
+
+	
+Labo CETEMCO
+
+
+	ISO 10545-11V2000
+		
+
+
+
+
+	
+
+Rapport CETEMCO
+
+
+
+		Essais chimiques :
+
+- Résistance aux produits chimiques ;
+
+- Détermination de la résistance aux taches
+
+	
+
+
+Labo CETEMCO
+
+
+
+
+	
+
+ISO 10545-13V2017
+
+
+
+ISO 10545-14V2017
+
+
+		
+
+
+
+
+	
+Rapport CETEMCO
+
+
+
+Rapport CETEMCO
+
+
+ 
+PDE     	Emaux	Densité	Densimètre	Engobe    : 1780 – 1830 g/l
+Email       : 1730 – 1780 g/l
+Mate       : 1780 – 1830 g/l	Contrôleur 	1 fois / jour	R2_F14_Labo
+		Viscosité
+	Viscosimètre	Engobe    :  25  - 55 secondes
+Email       :  25  - 55 secondes
+Mate       :  25  - 55 secondes
+			
+		Refus	Tamis 45 U	
+Engobe    : 0,1 – 1,5 ml
+Email       : 3 – 5 ml
+Mate       : 1.5 – 3 ml			
+		Aspect	Traineau	Carreau témoin			
+LIGNES DES EMAUX	Email	Viscosité	Viscosimètre	
+Engobe    : 25  - 55 secondes
+Email       : 25  - 55 secondes
+Mate       : 25  - 55 secondes
+	Contrôleur
+	   12 fois / jour
+ 	R2_F9_Labo
+
+		Densité	Densimètre	Engobe    : 1780 – 1830 g/l
+Email       : 1730 – 1780 g/l
+Mate       : 1780 – 1830 g/l			
+	Eau	Grammage	Balance	Format 20x20 : 0.5 – 3 g
+Format 25x40 : 1 – 5 g
+Format 25x50 : 3 – 7 g
+	Contrôleur	 12 fois / jour	R2_F10_Labo
+	Engobe			Format 20x20 : 20 – 23 g
+Format 25x40 : 50 – 55 g
+Format 25x50 : 70 – 75 g
+			
+	          Email	Cristalline/Opaque			Format 20x20 : 20 – 23 g
+Format 20x40 : 50 – 55 g
+Format 25x50 : 70 – 75 g
+			
+	Mate			Format 20x20 : 20 – 23 g
+Format 25x40 : 50 – 55 g
+Format 25x50 : 70 – 75 g
+			
+	Carreau 
+Décoré
+DIGITAL	Netteté
+Décalage
+Tonalité	Visuel	Carreau témoin	Contrôleur	12 fois / jour	R2_F4_Labo

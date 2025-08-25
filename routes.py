@@ -235,7 +235,7 @@ def create_test():
                 test.length = float(request.form['tile_length']) if request.form['tile_length'] else None
                 test.width = float(request.form['tile_width']) if request.form['tile_width'] else None  
                 test.thickness = float(request.form['tile_thickness']) if request.form['tile_thickness'] else None
-                test.calculate_flexural_strength()
+                test.calculate_flexural_strength_lab_specs()
             else:
                 test.breaking_strength = float(request.form['breaking_strength']) if request.form['breaking_strength'] else None
                 
@@ -271,21 +271,18 @@ def create_test():
         
         test.visual_defects = request.form['visual_defects']
         
-        # Try automatic result determination first
+        # FORCE automatic result determination - no manual input allowed
         auto_result = test.determine_result_automatically()
-        if auto_result and not request.form.get('manual_override'):
+        if auto_result:
             # Use automatic result
             test.result = auto_result
             classification_info = f" | Classification: {test.tile_classification}" if test.tile_classification else ""
             ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
                                    f'Test automatiquement évalué: {auto_result.upper()} (Score: {test.compliance_score:.1f}%){classification_info}')
         else:
-            # Use manual result if auto-detection failed or manual override requested
-            test.compliance_score = float(request.form['compliance_score']) if request.form['compliance_score'] else None
-            test.result = request.form['result']
-            test.tile_classification = request.form.get('tile_classification', '')
-            ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
-                                   f'Test manuellement évalué: {test.result.upper()}')
+            # If automatic evaluation fails, cannot proceed - insufficient data
+            flash('Erreur: Impossible d\'évaluer automatiquement le test. Vérifiez que toutes les mesures nécessaires sont saisies.', 'error')
+            return redirect(url_for('create_test'))
         
         db.session.add(test)
         db.session.commit()

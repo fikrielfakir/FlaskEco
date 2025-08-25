@@ -98,6 +98,7 @@ class QualityTest(db.Model):
     thermal_shock_resistance = db.Column(db.Boolean)  # Pass/fail for thermal shock
     shrinkage_expansion = db.Column(db.Float)  # % shrinkage/expansion (-0.2 to +0.4%)
     loss_on_ignition = db.Column(db.Float)  # % loss on fire (10-19%)
+    residual_humidity = db.Column(db.Float)  # % residual humidity in séchoir (0.1-1.5%)
     
     # Glaze testing (for Four Email/Glaze kiln)
     glaze_density = db.Column(db.Float)  # g/l glaze density
@@ -147,22 +148,183 @@ class QualityTest(db.Model):
         return defaults.get(param, 200.0)
     
     def determine_result_laboratory_specs(self):
-        """Determine test result based on laboratory control plan specifications"""
+        """Determine test result based on exact laboratory control plan specifications"""
         score = 0
         total_checks = 0
         compliance_details = []
         
-        if self.test_type == 'dimensional':
-            # Check dimensional tolerances according to control plan
+        # PDM - ARGILE (Raw Materials)
+        if self.test_type == 'clay_testing':
+            clay_specs = [
+                ('clay_humidity_hopper', self.clay_humidity_hopper, 2.5, 4.1, 'Humidité trémie générale'),
+                ('clay_humidity_sieved', self.clay_humidity_sieved, 2.0, 3.5, 'Humidité après tamisage'),
+                ('clay_humidity_silo', self.clay_humidity_silo, 5.3, 6.3, 'Humidité silo'),
+                ('clay_humidity_press', self.clay_humidity_press, 5.2, 6.0, 'Humidité argile presse'),
+                ('clay_granulometry_refusal', self.clay_granulometry_refusal, 10.0, 20.0, 'Granulométrie CaCO3'),
+                ('clay_carbonate_content', self.clay_carbonate_content, 15.0, 25.0, 'Carbonate CaCO3')
+            ]
+            
+            for param, value, min_val, max_val, label in clay_specs:
+                if value is not None:
+                    total_checks += 1
+                    is_compliant = min_val <= value <= max_val
+                    
+                    if is_compliant:
+                        score += 1
+                        
+                    compliance_details.append(f"{label}: {'CONFORME' if is_compliant else 'NON CONFORME'} ({value:.1f}% [{min_val}-{max_val}%])")
+        
+        # PRESSES
+        elif self.test_type == 'pressing':
+            # Determine format from batch
+            product_format = getattr(self.batch, 'product_format', '20x20') if self.batch else '20x20'
+            
+            # Thickness specifications by format
+            thickness_specs = {
+                '20x20': (6.2, 7.2),
+                '25x40': (6.8, 7.4), 
+                '25x50': (7.1, 7.7)
+            }
+            
+            # Weight specifications by format  
+            weight_specs = {
+                '20x20': (480, 580),
+                '25x40': (1150, 1550),
+                '25x50': (1800, 2000)
+            }
+            
+            # Check thickness
+            if self.thickness is not None:
+                total_checks += 1
+                min_thick, max_thick = thickness_specs.get(product_format, (6.2, 7.2))
+                is_compliant = min_thick <= self.thickness <= max_thick
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Épaisseur: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.thickness:.1f}mm [{min_thick}-{max_thick}mm])")
+            
+            # Check surface defects (visual aspect)
+            if self.visual_defects is not None:
+                surface_checks = [
+                    ('grains', 15.0),
+                    ('fissures', 1.0),
+                    ('nettoyage', 1.0),
+                    ('feuillage', 1.0),
+                    ('ecornage', 1.0)
+                ]
+                
+                defect_text = str(self.visual_defects).lower()
+                
+                for defect_type, max_percent in surface_checks:
+                    total_checks += 1
+                    # Simple check if defect mentioned
+                    is_compliant = defect_type not in defect_text
+                    
+                    if is_compliant:
+                        score += 1
+                        
+                    compliance_details.append(f"{defect_type.title()}: {'CONFORME' if is_compliant else 'NON CONFORME'} (≤{max_percent}%)")
+                        
+        # SÉCHOIR (Dryer)
+        elif self.test_type == 'drying':
+            # Residual humidity check
+            if hasattr(self, 'residual_humidity') and self.residual_humidity is not None:
+                total_checks += 1
+                is_compliant = 0.1 <= self.residual_humidity <= 1.5
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Humidité résiduelle: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.residual_humidity:.1f}% [0.1-1.5%])")
+        
+        # FOUR BISCUIT (Bisque Firing)
+        elif self.test_type == 'bisque_firing':
+            biscuit_defects = [
+                ('fissure', 5.0),
+                ('ecorne', 5.0), 
+                ('cuisson', 1.0),
+                ('feuillete', 1.0),
+                ('planeite', 5.0)
+            ]
+            
+            if self.visual_defects is not None:
+                defect_text = str(self.visual_defects).lower()
+                
+                for defect_type, max_percent in biscuit_defects:
+                    total_checks += 1
+                    is_compliant = defect_type not in defect_text
+                    
+                    if is_compliant:
+                        score += 1
+                        
+                    compliance_details.append(f"{defect_type.title()}: {'CONFORME' if is_compliant else 'NON CONFORME'} (≤{max_percent}%)")
+            
+            # Thermal shock test
+            if self.thermal_shock_resistance is not None:
+                total_checks += 1
+                is_compliant = self.thermal_shock_resistance == True
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Choc thermique: {'CONFORME' if is_compliant else 'NON CONFORME'} (Absence fissure)")
+            
+            # Shrinkage/expansion
+            if self.shrinkage_expansion is not None:
+                total_checks += 1
+                is_compliant = -0.2 <= self.shrinkage_expansion <= 0.4
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Retrait/dilatation: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.shrinkage_expansion:.1f}% [-0.2 à +0.4%])")
+            
+            # Loss on ignition
+            if self.loss_on_ignition is not None:
+                total_checks += 1
+                is_compliant = 10.0 <= self.loss_on_ignition <= 19.0
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Perte au feu: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.loss_on_ignition:.1f}% [10-19%])")
+        
+        # FOUR EMAIL (Enamel Firing) - Breaking Strength
+        elif self.test_type == 'breaking_strength':
+            if self.breaking_force is not None and self.thickness is not None:
+                total_checks += 1
+                # Force specifications: ≥7.5mm = min 600N, <7.5mm = min 200N
+                min_force = 600 if self.thickness >= 7.5 else 200
+                is_compliant = self.breaking_force >= min_force
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Force rupture: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.breaking_force:.0f}N vs {min_force}N min)")
+                
+            if self.breaking_strength is not None and self.thickness is not None:
+                total_checks += 1
+                # Module specifications: ≥7.5mm = min 12 N/mm², <7.5mm = min 15 N/mm²
+                min_modulus = 12 if self.thickness >= 7.5 else 15
+                is_compliant = self.breaking_strength >= min_modulus
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Module rupture: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.breaking_strength:.1f} vs {min_modulus} N/mm² min)")
+        
+        # FOUR EMAIL - Dimensional Characteristics
+        elif self.test_type == 'dimensional':
+            # Length & Width: ±0.5% max 2mm
             dimensional_checks = [
-                ('length', self.length, 0.5, 2.0),      # ±0.5% max 2mm
-                ('width', self.width, 0.5, 2.0),        # ±0.5% max 2mm
-                ('thickness', self.thickness, 10.0, 0.5), # ±10% max 0.5mm
-                ('straightness', self.straightness, None, 1.5), # max 1.5mm (rectitude arêtes)
-                ('central_curvature', self.central_curvature, None, 2.0), # max 2mm
-                ('lateral_curvature', self.lateral_curvature, None, 2.0), # max 2mm
-                ('warping', self.warping, None, 2.0),     # voile max 2mm
-                ('angularity', self.angularity, None, 2.0) # max 2mm
+                ('length', self.length, 0.5, 2.0),
+                ('width', self.width, 0.5, 2.0),
+                ('thickness', self.thickness, 10.0, 0.5),  # ±10% ±0.5mm
+                ('central_curvature', self.central_curvature, None, 2.0),  # ±0.5% ±2mm
+                ('lateral_curvature', self.lateral_curvature, None, 2.0),  # ±0.5% ±2mm
+                ('angularity', self.angularity, None, 2.0),  # ±0.5% ±2mm
+                ('straightness', self.straightness, None, 1.5)  # ±0.3% ±1.5mm
             ]
             
             for param_name, value, percent_tol, mm_tol in dimensional_checks:
@@ -171,7 +333,6 @@ class QualityTest(db.Model):
                     is_compliant = True
                     
                     if param_name in ['length', 'width']:
-                        # Get nominal dimension from batch or use default
                         nominal = getattr(self.batch, f'nominal_{param_name}', 200.0) if self.batch else 200.0
                         deviation_percent = abs((value - nominal) / nominal) * 100
                         deviation_mm = abs(value - nominal)
@@ -192,57 +353,89 @@ class QualityTest(db.Model):
                         detail = f"Épaisseur: {'CONFORME' if is_compliant else 'NON CONFORME'} ({deviation_percent:.1f}%, {deviation_mm:.2f}mm)"
                         
                     else:
-                        # Direct measurement against maximum tolerance
+                        # Direct measurement against tolerance
                         if value > mm_tol:
                             is_compliant = False
                             
-                        detail = f"{param_name.replace('_', ' ').title()}: {'CONFORME' if is_compliant else 'NON CONFORME'} ({value:.2f}mm)"
+                        detail = f"{param_name.replace('_', ' ').title()}: {'CONFORME' if is_compliant else 'NON CONFORME'} ({value:.2f}mm ≤{mm_tol}mm)"
                     
                     if is_compliant:
                         score += 1
                     compliance_details.append(detail)
         
+        # FOUR EMAIL - Water Absorption
         elif self.test_type == 'water_absorption':
             if self.water_absorption is not None:
                 total_checks = 1
-                # Control plan: E > 10% for faïence, minimum individual 9%
+                # E > 10%, individual minimum 9%
                 is_compliant = self.water_absorption >= 9.0
                 
                 if is_compliant:
                     score = 1
-                    if self.water_absorption <= 10.0:
-                        self.tile_classification = "Limite faïence"
-                    elif self.water_absorption <= 20.0:
-                        self.tile_classification = "Faïence standard"
-                    else:
-                        self.tile_classification = "Faïence (indication fabricant requise)"
+                    if self.water_absorption > 10.0:
+                        self.tile_classification = "Faïence conforme"
+                    elif self.water_absorption >= 9.0:
+                        self.tile_classification = "Limite acceptable"
+                    
+                    if self.water_absorption > 20.0:
+                        self.tile_classification += " (indication fabricant requise)"
                         
-                compliance_details.append(f"Absorption: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.water_absorption:.2f}%)")
+                compliance_details.append(f"Absorption: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.water_absorption:.2f}% ≥9%)")
         
-        elif self.test_type == 'breaking_strength':
-            if self.breaking_force is not None and self.thickness is not None:
+        # FOUR EMAIL - Surface Quality
+        elif self.test_type == 'surface_quality':
+            if self.surface_quality_score is not None:
                 total_checks += 1
-                
-                # Control plan specifications based on thickness
-                min_force = 600 if self.thickness >= 7.5 else 200  # N
-                is_compliant = self.breaking_force >= min_force
+                # 95% minimum exempt from defects
+                is_compliant = self.surface_quality_score >= 95.0
                 
                 if is_compliant:
                     score += 1
                     
-                compliance_details.append(f"Force rupture: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.breaking_force:.0f}N vs {min_force}N min)")
-                
-            if self.breaking_strength is not None and self.thickness is not None:
+                compliance_details.append(f"Qualité surface: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.surface_quality_score:.1f}% ≥95%)")
+        
+        # PDE - EMAUX (Enamel)
+        elif self.test_type == 'glaze_testing':
+            # Density specifications
+            if self.glaze_density is not None:
                 total_checks += 1
                 
-                # Control plan: ≥7.5mm = min 12 N/mm², <7.5mm = min 15 N/mm²
-                min_modulus = 12 if self.thickness >= 7.5 else 15  # N/mm²
-                is_compliant = self.breaking_strength >= min_modulus
+                # Determine type and check specs
+                density_specs = {
+                    'engobe': (1780, 1830),
+                    'email': (1730, 1780),
+                    'mate': (1780, 1830)
+                }
+                
+                # Default to email specs
+                min_density, max_density = density_specs.get('email', (1730, 1780))
+                is_compliant = min_density <= self.glaze_density <= max_density
                 
                 if is_compliant:
                     score += 1
                     
-                compliance_details.append(f"Module rupture: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.breaking_strength:.1f} vs {min_modulus} N/mm² min)")
+                compliance_details.append(f"Densité: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.glaze_density:.0f}g/l [{min_density}-{max_density}g/l])")
+            
+            # Viscosity
+            if self.glaze_viscosity is not None:
+                total_checks += 1
+                is_compliant = 25 <= self.glaze_viscosity <= 55
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Viscosité: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.glaze_viscosity:.0f}s [25-55s])")
+            
+            # Refusal at 45μ sieve  
+            if self.glaze_refusal is not None:
+                total_checks += 1
+                # Default email specs: 3-5ml
+                is_compliant = 3.0 <= self.glaze_refusal <= 5.0
+                
+                if is_compliant:
+                    score += 1
+                    
+                compliance_details.append(f"Refus 45μ: {'CONFORME' if is_compliant else 'NON CONFORME'} ({self.glaze_refusal:.1f}ml [3-5ml])")
         
         # Store results
         if total_checks > 0:
