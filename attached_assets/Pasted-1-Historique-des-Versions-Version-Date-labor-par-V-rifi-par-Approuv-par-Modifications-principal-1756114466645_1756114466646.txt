@@ -1,0 +1,65 @@
+1. Historique des Versions
+Version	Date	Élaboré par	Vérifié par	Approuvé par	Modifications principales
+00	01/01/2009	Responsable Laboratoire	Responsable Qualité	Directeur Général	Création
+01	20/07/2010	RL	RQ	DG	Ajout formules pour nouveaux émaux
+02	01/02/2011	RL	RQ	DG	Spécifications carreaux 20x30 + densité émaux
+03	01/01/2013	RL	RQ	DG	Suppression contrôles Presse + ajout contrôles Four Émail
+04	01/06/2015	RL	RQ	DG	Ajout carreaux 25x35 + densité émaux
+05	18/05/2018	RL	RQ	DG	Ajout format 25x40
+06	16/12/2021	RL	RQ	DG	Résultats essais dimensionnels & qualité de surface
+07	30/04/2023	RL	RQ	DG	Ajout format 25x50
+08	23/10/2024	RL	RQ	DG	Ajout essais CETEMCO
+2. Étapes de Contrôle
+a) Matières Premières – PDM (Préparation des Matières)
+Produit	Caractéristiques	Moyens	Spécifications	Fréquence	Enregistrement
+Argile	Humidité trémie générale	Balance + étuve	2.5% ≤ H ≤ 4.1%	1/jour	R2-F1-LABO
+	Humidité après tamisage	idem	2% ≤ H ≤ 3.5%	1/semaine	R2-F1-LABO
+	Humidité silo	idem	5.3% ≤ H ≤ 6.3%	4/jour	R2-F1-LABO
+	Granulométrie CaCO3	Machine granulométrie	10–20% refus	1/semaine	R2-F2-LABO
+	CaCO3 argile	Calcimètre	15% ≤ CaCO3 ≤ 25%	1/semaine	R2-F2-LABO
+b) Presses
+Produit	Caractéristiques	Moyens	Spécifications	Fréquence	Enregistrement
+Carreau pressé	Épaisseur	Pied à coulisse	6.2–7.2 mm (20x20), 6.8–7.4 mm (25x40), 7.1–7.7 mm (25x50)	6/jour	R2-F3-LABO
+	Poids humide	Balance	480–580 g (20x20), 1150–1550 g (25x40), 1800–2000 g (25x50)	6/jour	R2-F3-LABO
+	Aspect	Visuel	Défauts ≤ 1% (grains, fissures, écornage, feuillage, nettoyage)	6/jour	R2-F16-LABO
+	Humidité argile presse	Balance + étuve	5.2% ≤ H ≤ 6%	1/jour	R2-F1-LABO
+c) Séchoir
+Produit	Caractéristiques	Moyens	Spécifications	Fréquence	Enregistrement
+Carreau séché	Humidité résiduelle	Balance	0.1% ≤ HR ≤ 1.5%	1/jour	R2-F1-LABO
+	Aspect	Visuel	Défauts ≤ 1% (grains, fissures, écornage, feuillage, nettoyage)	6/jour	R2-F16-LABO
+d) Four Biscuit
+Produit	Caractéristiques	Moyens	Spécifications	Fréquence	Enregistrement
+Carreau cuit	Fissures, écornes, cuisson, feuilleté, planéité	Visuel	Défauts ≤ 5% (sauf cuisson ≤1%)	6/jour	R2-F5-LABO
+	Choc thermique	Manuel	Absence de fissures non visibles	6/jour	R2-F5-LABO
+	Retrait/dilatation	Pied à coulisse	-0.2% à +0.4%	1/semaine	R2-F6-LABO
+	Perte au feu	Balance	10% – 19%	1/semaine	R2-F6-LABO
+e) Four Émail
+
+Tests plus complets (dimensionnels, mécaniques, absorption, couleur, surface).
+Exemples :
+
+Résistance à la rupture (ISO 10545-4)
+
+Absorption d’eau (ISO 10545-3)
+
+Défauts visuels / planéité (ISO 10545-2)
+
+Essais CETEMCO : résistance thermique, chimique, taches (ISO 10545-9, -11, -13, -14)
+
+f) PDE & Émaux (Préparation des émaux et ligne)
+
+Contrôle densité, viscosité, refus au tamis
+
+Grammage eau, engobe, émail, mat
+
+Vérification aspect (carreaux témoins)
+
+g) Décor Digital & Classification finale
+
+Contrôle visuel : netteté, décalage, tonalité
+
+Classification par choix (triage qualité)
+
+3. Diffusion
+
+Destinataires : Pilotes de processus, Responsables Qualité, Laboratoire, Direction.
