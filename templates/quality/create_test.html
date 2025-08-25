@@ -1,164 +1,312 @@
 {% extends "base.html" %}
 
-{% block title %}Nouveau Test de Qualité - EcoQuality{% endblock %}
+{% block title %}Nouveau Test de Qualité ISO 10545 - EcoQuality{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-md-10">
+        <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h4><i class="fas fa-vial me-2"></i>Nouveau Test de Qualité</h4>
+                    <h4><i class="fas fa-microscope me-2"></i>Nouveau Test de Qualité - Conformité ISO 10545 / NM ISO 13006</h4>
+                    <small class="text-muted">Tests selon les méthodes ISO 10545 et classification ISO 13006 pour carreaux céramiques</small>
                 </div>
                 <div class="card-body">
                     <form method="POST" id="testForm">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="batch_id" class="form-label">Lot de Production *</label>
-                                <select class="form-select" id="batch_id" name="batch_id" required>
-                                    <option value="">Sélectionner un lot</option>
-                                    {% for batch in batches %}
-                                        <option value="{{ batch.id }}" 
-                                                {% if request.args.get('batch_id') == batch.id|string %}selected{% endif %}>
-                                            {{ batch.lot_number }} - {{ batch.product_type }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="test_type" class="form-label">Type de Test *</label>
-                                <select class="form-select" id="test_type" name="test_type" required onchange="toggleTestFields()">
-                                    <option value="">Sélectionner un type</option>
-                                    <option value="dimensional">Test Dimensionnel</option>
-                                    <option value="water_absorption">Absorption d'Eau</option>
-                                    <option value="breaking_strength">Résistance à la Rupture</option>
-                                    <option value="abrasion">Résistance à l'Abrasion</option>
-                                </select>
-                            </div>
-                        </div>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="iso_standard" class="form-label">Norme ISO *</label>
-                                <select class="form-select" id="iso_standard" name="iso_standard" required>
-                                    <option value="">Sélectionner une norme</option>
-                                    <option value="ISO 13006">ISO 13006 - Classification céramique</option>
-                                    <option value="ISO 10545-3">ISO 10545-3 - Absorption d'eau</option>
-                                    <option value="ISO 10545-4">ISO 10545-4 - Résistance à la rupture</option>
-                                    <option value="ISO 10545-7">ISO 10545-7 - Résistance à l'abrasion</option>
-                                    <option value="NM 10.1.008">NM 10.1.008 - Standards marocains</option>
-                                </select>
+                        <!-- Sample Information -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Gestion de l'Échantillon</h6>
                             </div>
-                        </div>
-                        
-                        <!-- Dimensional Test Fields -->
-                        <div id="dimensional_fields" class="test-fields" style="display: none;">
-                            <h6 class="text-primary"><i class="fas fa-ruler me-1"></i>Mesures Dimensionnelles</h6>
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <label for="length" class="form-label">Longueur (mm)</label>
-                                    <input type="number" class="form-control" id="length" name="length" step="0.1">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="batch_id" class="form-label">Lot de Production *</label>
+                                        <select class="form-select" id="batch_id" name="batch_id" required>
+                                            <option value="">Sélectionner un lot</option>
+                                            {% for batch in batches %}
+                                                <option value="{{ batch.id }}" 
+                                                        {% if request.args.get('batch_id') == batch.id|string %}selected{% endif %}>
+                                                    {{ batch.lot_number }} - {{ batch.product_type }} ({{ batch.production_date.strftime('%d/%m/%Y') }})
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">ID d'échantillon sera généré automatiquement</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="test_type" class="form-label">Type de Test ISO 10545 *</label>
+                                        <select class="form-select" id="test_type" name="test_type" required onchange="toggleTestFields()">
+                                            <option value="">Sélectionner un type</option>
+                                            <option value="dimensional">ISO 10545-2: Dimensions et qualité de surface</option>
+                                            <option value="water_absorption">ISO 10545-3: Absorption d'eau</option>
+                                            <option value="breaking_strength">ISO 10545-4: Résistance à la rupture</option>
+                                            <option value="abrasion">ISO 10545-6/7: Résistance à l'abrasion</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="width" class="form-label">Largeur (mm)</label>
-                                    <input type="number" class="form-control" id="width" name="width" step="0.1">
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="thickness" class="form-label">Épaisseur (mm)</label>
-                                    <input type="number" class="form-control" id="thickness" name="thickness" step="0.1">
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <label for="warping" class="form-label">Gauchissement (mm)</label>
-                                    <input type="number" class="form-control" id="warping" name="warping" step="0.01">
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="forming_method" class="form-label">Méthode de Formage *</label>
+                                        <select class="form-select" id="forming_method" name="forming_method" required>
+                                            <option value="Pressed">Pressé (B)</option>
+                                            <option value="Extruded">Extrudé (A)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-3">
+                                        <label for="surface_type" class="form-label">Type de Surface *</label>
+                                        <select class="form-select" id="surface_type" name="surface_type" required>
+                                            <option value="glazed">Émaillé</option>
+                                            <option value="unglazed">Non émaillé</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-4 mb-3">
+                                        <label for="temperature_humidity" class="form-label">Conditions d'Essai</label>
+                                        <input type="text" class="form-control" id="temperature_humidity" name="temperature_humidity" 
+                                               placeholder="20°C ± 2°C, 65% ± 5% HR">
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Water Absorption Test Fields -->
-                        <div id="water_absorption_fields" class="test-fields" style="display: none;">
-                            <h6 class="text-primary"><i class="fas fa-tint me-1"></i>Test d'Absorption d'Eau</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="water_absorption" class="form-label">Absorption d'Eau (%)</label>
-                                    <input type="number" class="form-control" id="water_absorption" name="water_absorption" step="0.01" min="0" max="100">
+                        <!-- Dimensional Test Fields (ISO 10545-2) -->
+                        <div id="dimensional_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-ruler-combined me-2"></i>ISO 10545-2: Mesures Dimensionnelles et Qualité de Surface</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <strong>Tolérances pour carreaux BIa (Porcelaine):</strong> 
+                                    Longueur/Largeur: ±0.6% (max 2.0mm) | Épaisseur: ±5.0% | Rectitude/Planéité: ±0.5%
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-2 mb-3">
+                                        <label for="length" class="form-label">Longueur (mm)</label>
+                                        <input type="number" class="form-control" id="length" name="length" step="0.01" placeholder="ex: 600.0">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label for="width" class="form-label">Largeur (mm)</label>
+                                        <input type="number" class="form-control" id="width" name="width" step="0.01" placeholder="ex: 600.0">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label for="thickness" class="form-label">Épaisseur (mm)</label>
+                                        <input type="number" class="form-control" id="thickness" name="thickness" step="0.01" placeholder="ex: 9.5">
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label for="straightness" class="form-label">Rectitude (mm)</label>
+                                        <input type="number" class="form-control" id="straightness" name="straightness" step="0.01" placeholder="ex: 0.3">
+                                        <div class="form-text">Déviation max</div>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label for="flatness" class="form-label">Planéité (mm)</label>
+                                        <input type="number" class="form-control" id="flatness" name="flatness" step="0.01" placeholder="ex: 0.4">
+                                        <div class="form-text">Déviation max</div>
+                                    </div>
+                                    <div class="col-md-2 mb-3">
+                                        <label for="rectangularity" class="form-label">Orthogonalité (mm)</label>
+                                        <input type="number" class="form-control" id="rectangularity" name="rectangularity" step="0.01" placeholder="ex: 0.2">
+                                        <div class="form-text">Déviation max</div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label for="warping" class="form-label">Gauchissement (%)</label>
+                                        <input type="number" class="form-control" id="warping" name="warping" step="0.01" placeholder="ex: 0.3">
+                                        <div class="form-text">% de courbure</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Breaking Strength Test Fields -->
-                        <div id="breaking_strength_fields" class="test-fields" style="display: none;">
-                            <h6 class="text-primary"><i class="fas fa-hammer me-1"></i>Test de Résistance à la Rupture</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="breaking_strength" class="form-label">Force de Rupture (N)</label>
-                                    <input type="number" class="form-control" id="breaking_strength" name="breaking_strength" step="0.1" min="0">
+                        <!-- Water Absorption Test Fields (ISO 10545-3) -->
+                        <div id="water_absorption_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-tint me-2"></i>ISO 10545-3: Test d'Absorption d'Eau</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <strong>Classification par absorption:</strong> 
+                                    BIa (Porcelaine): ≤0.5% | BIIa (Grès cérame): 0.5-3% | BIII (Faïence): >10%
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="water_absorption" class="form-label">Absorption d'Eau (%) *</label>
+                                        <input type="number" class="form-control" id="water_absorption" name="water_absorption" 
+                                               step="0.01" min="0" max="100" placeholder="ex: 0.3" onchange="updateClassification()">
+                                        <div class="form-text">Pourcentage d'eau absorbée par rapport au poids sec</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Classification Automatique</label>
+                                        <div id="auto_classification" class="form-control-plaintext fw-bold text-success">
+                                            Sera calculée automatiquement
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Abrasion Test Fields -->
-                        <div id="abrasion_fields" class="test-fields" style="display: none;">
-                            <h6 class="text-primary"><i class="fas fa-shield-alt me-1"></i>Test de Résistance à l'Abrasion</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="abrasion_resistance" class="form-label">Classe PEI</label>
-                                    <select class="form-select" id="abrasion_resistance" name="abrasion_resistance">
-                                        <option value="">Sélectionner une classe</option>
-                                        <option value="PEI 0">PEI 0 - Usage très limité</option>
-                                        <option value="PEI I">PEI I - Passage piéton léger</option>
-                                        <option value="PEI II">PEI II - Passage piéton moyen</option>
-                                        <option value="PEI III">PEI III - Passage piéton intense</option>
-                                        <option value="PEI IV">PEI IV - Passage piéton très intense</option>
-                                        <option value="PEI V">PEI V - Usage commercial</option>
-                                    </select>
+                        <!-- Breaking Strength Test Fields (ISO 10545-4) -->
+                        <div id="breaking_strength_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-hammer me-2"></i>ISO 10545-4: Résistance à la Rupture et Force de Rupture</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-warning">
+                                    <strong>Exigences:</strong> 
+                                    Force de rupture: ≥1300 N | Résistance à la flexion BIa: ≥35 N/mm² | Autres: ≥22 N/mm²
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label for="breaking_force" class="form-label">Force de Rupture (N) *</label>
+                                        <input type="number" class="form-control" id="breaking_force" name="breaking_force" 
+                                               step="0.1" min="0" placeholder="ex: 1500" onchange="calculateFlexuralStrength()">
+                                        <div class="form-text">Force appliquée en Newtons</div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="tile_length" class="form-label">Longueur Carreau (mm)</label>
+                                        <input type="number" class="form-control" id="tile_length" name="tile_length" 
+                                               step="0.1" placeholder="ex: 600.0" onchange="calculateFlexuralStrength()">
+                                        <div class="form-text">Pour calcul résistance</div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="tile_width" class="form-label">Largeur Carreau (mm)</label>
+                                        <input type="number" class="form-control" id="tile_width" name="tile_width" 
+                                               step="0.1" placeholder="ex: 600.0" onchange="calculateFlexuralStrength()">
+                                        <div class="form-text">Pour calcul résistance</div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="tile_thickness" class="form-label">Épaisseur Carreau (mm)</label>
+                                        <input type="number" class="form-control" id="tile_thickness" name="tile_thickness" 
+                                               step="0.1" placeholder="ex: 9.5" onchange="calculateFlexuralStrength()">
+                                        <div class="form-text">Pour calcul résistance</div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="auto_calculate_strength" name="auto_calculate_strength" checked>
+                                            <label class="form-check-label" for="auto_calculate_strength">
+                                                Calcul automatique de la résistance à la flexion
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="breaking_strength" class="form-label">Résistance à la Flexion (N/mm²)</label>
+                                        <input type="number" class="form-control" id="breaking_strength" name="breaking_strength" 
+                                               step="0.1" placeholder="Calculé automatiquement" readonly>
+                                        <div class="form-text">Calculé: (3×F×L)/(2×b×h²)</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Visual Inspection -->
-                        <div class="mb-3">
-                            <label for="visual_defects" class="form-label">Défauts Visuels</label>
-                            <textarea class="form-control" id="visual_defects" name="visual_defects" rows="3" 
-                                      placeholder="Description des défauts visuels observés"></textarea>
-                        </div>
-                        
-                        <!-- Test Results -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="compliance_score" class="form-label">Score de Conformité (%)</label>
-                                <input type="number" class="form-control" id="compliance_score" name="compliance_score" 
-                                       step="0.1" min="0" max="100">
-                                <div class="form-text">Sera calculé automatiquement si les normes ISO sont configurées</div>
+                        <!-- Abrasion Test Fields (ISO 10545-6/7) -->
+                        <div id="abrasion_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>ISO 10545-6/7: Résistance à l'Abrasion</h6>
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="result" class="form-label">Résultat du Test *</label>
-                                <select class="form-select" id="result" name="result" required>
-                                    <option value="">Sélectionner un résultat</option>
-                                    <option value="pass" class="text-success">Conforme (Pass)</option>
-                                    <option value="fail" class="text-danger">Non Conforme (Fail)</option>
-                                </select>
-                                <div class="form-text">
-                                    <i class="fas fa-magic me-1"></i>Détection automatique activée si normes ISO configurées
+                            <div class="card-body">
+                                <div class="alert alert-secondary">
+                                    <strong>Classification PEI:</strong> 
+                                    PEI I: Usage résidentiel léger | PEI II: Moyen | PEI III: Intense | PEI IV: Très intense | PEI V: Commercial
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="abrasion_resistance" class="form-label">Classe PEI *</label>
+                                        <select class="form-select" id="abrasion_resistance" name="abrasion_resistance">
+                                            <option value="">Sélectionner une classe</option>
+                                            <option value="PEI 0">PEI 0 - Usage très limité (murs uniquement)</option>
+                                            <option value="PEI I">PEI I - Résidentiel léger (chambres, salles de bain)</option>
+                                            <option value="PEI II">PEI II - Résidentiel moyen (toutes pièces sauf cuisine)</option>
+                                            <option value="PEI III">PEI III - Résidentiel intense + commercial léger</option>
+                                            <option value="PEI IV">PEI IV - Commercial moyen (bureaux, magasins)</option>
+                                            <option value="PEI V">PEI V - Commercial intense (aéroports, centres commerciaux)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="abrasion_cycles" class="form-label">Cycles d'Essai</label>
+                                        <input type="number" class="form-control" id="abrasion_cycles" name="abrasion_cycles" 
+                                               placeholder="ex: 1500" min="0">
+                                        <div class="form-text">Nombre de cycles réalisés</div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="volume_loss" class="form-label">Perte de Volume (mm³)</label>
+                                        <input type="number" class="form-control" id="volume_loss" name="volume_loss" 
+                                               step="0.1" placeholder="ex: 125" min="0">
+                                        <div class="form-text">Pour carreaux non émaillés</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Manual Override -->
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="manual_override" name="manual_override">
-                                <label class="form-check-label" for="manual_override">
-                                    <i class="fas fa-user-edit me-1"></i>Forçage manuel du résultat (ignorer l'évaluation automatique)
-                                </label>
+                        <!-- ISO Standard Selection -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-certificate me-2"></i>Norme ISO et Résultats</h6>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="notes" class="form-label">Notes et Observations</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="3" 
-                                      placeholder="Notes additionnelles, observations, recommandations"></textarea>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="iso_standard" class="form-label">Norme ISO Appliquée *</label>
+                                        <select class="form-select" id="iso_standard" name="iso_standard" required>
+                                            <option value="">Sélectionner une norme</option>
+                                            {% for test_type, standard in iso_standards.items() %}
+                                                <option value="{{ standard }}">{{ standard }}</option>
+                                            {% endfor %}
+                                            <option value="NM ISO 13006">NM ISO 13006 - Classification (Maroc)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Visual Inspection -->
+                                <div class="mb-3">
+                                    <label for="visual_defects" class="form-label">Inspection Visuelle et Défauts</label>
+                                    <textarea class="form-control" id="visual_defects" name="visual_defects" rows="3" 
+                                              placeholder="Description des défauts visuels: fissures, taches, décoloration, etc."></textarea>
+                                </div>
+                                
+                                <!-- Test Results -->
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="compliance_score" class="form-label">Score de Conformité (%)</label>
+                                        <input type="number" class="form-control" id="compliance_score" name="compliance_score" 
+                                               step="0.1" min="0" max="100" placeholder="Calculé automatiquement">
+                                        <div class="form-text">Sera calculé automatiquement selon les normes ISO</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="result" class="form-label">Résultat du Test *</label>
+                                        <select class="form-select" id="result" name="result" required>
+                                            <option value="">Évaluation automatique</option>
+                                            <option value="pass" class="text-success">Conforme</option>
+                                            <option value="fail" class="text-danger">Non Conforme</option>
+                                        </select>
+                                        <div class="form-text">
+                                            <i class="fas fa-magic me-1 text-success"></i>Évaluation automatique selon ISO 10545
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Manual Override -->
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="manual_override" name="manual_override">
+                                        <label class="form-check-label" for="manual_override">
+                                            <i class="fas fa-user-edit me-1"></i>Saisie manuelle (désactiver l'évaluation automatique)
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label">Notes et Observations Techniques</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                              placeholder="Conditions particulières, observations du technicien, recommandations..."></textarea>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -166,7 +314,7 @@
                                 <i class="fas fa-times me-1"></i>Annuler
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-1"></i>Enregistrer le Test
+                                <i class="fas fa-microscope me-1"></i>Enregistrer le Test ISO
                             </button>
                         </div>
                     </form>
@@ -190,41 +338,101 @@ function toggleTestFields() {
         if (targetField) {
             targetField.style.display = 'block';
         }
+        
+        // Update ISO standard automatically
+        updateISOStandard(testType);
     }
 }
 
-// Update ISO standard options based on test type
-document.getElementById('test_type').addEventListener('change', function() {
-    const testType = this.value;
+function updateISOStandard(testType) {
     const isoSelect = document.getElementById('iso_standard');
-    
-    // Reset ISO options
-    isoSelect.innerHTML = '<option value="">Sélectionner une norme</option>';
-    
-    const isoOptions = {
-        'dimensional': [
-            {value: 'ISO 13006', text: 'ISO 13006 - Classification céramique'},
-            {value: 'NM 10.1.008', text: 'NM 10.1.008 - Standards marocains'}
-        ],
-        'water_absorption': [
-            {value: 'ISO 10545-3', text: 'ISO 10545-3 - Absorption d\'eau'},
-            {value: 'ISO 13006', text: 'ISO 13006 - Classification céramique'}
-        ],
-        'breaking_strength': [
-            {value: 'ISO 10545-4', text: 'ISO 10545-4 - Résistance à la rupture'}
-        ],
-        'abrasion': [
-            {value: 'ISO 10545-7', text: 'ISO 10545-7 - Résistance à l\'abrasion'}
-        ]
+    const isoMap = {
+        'dimensional': 'ISO 10545-2',
+        'water_absorption': 'ISO 10545-3',
+        'breaking_strength': 'ISO 10545-4',
+        'abrasion': 'ISO 10545-6'
     };
     
-    if (testType && isoOptions[testType]) {
-        isoOptions[testType].forEach(option => {
-            const optionElement = document.createElement('option');
-            optionElement.value = option.value;
-            optionElement.textContent = option.text;
-            isoSelect.appendChild(optionElement);
-        });
+    if (isoMap[testType]) {
+        // Find and select the matching option
+        for (let option of isoSelect.options) {
+            if (option.value.includes(isoMap[testType])) {
+                option.selected = true;
+                break;
+            }
+        }
+    }
+}
+
+function updateClassification() {
+    const absorption = parseFloat(document.getElementById('water_absorption').value);
+    const formingMethod = document.getElementById('forming_method').value;
+    const classificationDiv = document.getElementById('auto_classification');
+    
+    if (!isNaN(absorption)) {
+        let classification = '';
+        let colorClass = '';
+        
+        if (absorption <= 0.5) {
+            classification = formingMethod === 'Pressed' ? 'BIa (Porcelaine)' : 'AIa (Porcelaine extrudée)';
+            colorClass = 'text-success';
+        } else if (absorption <= 3.0) {
+            classification = formingMethod === 'Pressed' ? 'BIIa (Grès cérame)' : 'AIIa (Grès cérame extrudé)';
+            colorClass = 'text-warning';
+        } else if (absorption <= 6.0) {
+            classification = formingMethod === 'Pressed' ? 'BIIb (Grès)' : 'AIIb (Grès extrudé)';
+            colorClass = 'text-warning';
+        } else if (absorption <= 10.0) {
+            classification = formingMethod === 'Pressed' ? 'BIIc (Grès poreux)' : 'AIIc (Grès poreux extrudé)';
+            colorClass = 'text-info';
+        } else {
+            classification = formingMethod === 'Pressed' ? 'BIII (Faïence)' : 'AIII (Faïence extrudée)';
+            colorClass = 'text-secondary';
+        }
+        
+        classificationDiv.innerHTML = `<span class="${colorClass} fw-bold">${classification}</span>`;
+        classificationDiv.className = `form-control-plaintext fw-bold ${colorClass}`;
+    }
+}
+
+function calculateFlexuralStrength() {
+    const force = parseFloat(document.getElementById('breaking_force').value);
+    const length = parseFloat(document.getElementById('tile_length').value);
+    const width = parseFloat(document.getElementById('tile_width').value);
+    const thickness = parseFloat(document.getElementById('tile_thickness').value);
+    const autoCalc = document.getElementById('auto_calculate_strength').checked;
+    
+    if (autoCalc && force && length && width && thickness) {
+        // Flexural strength = (3 * F * L) / (2 * b * h²)
+        // L = span length (typically 90% of tile length)
+        const spanLength = length * 0.9;
+        const flexuralStrength = (3 * force * spanLength) / (2 * width * Math.pow(thickness, 2));
+        
+        document.getElementById('breaking_strength').value = flexuralStrength.toFixed(2);
+        
+        // Visual feedback for compliance
+        const strengthInput = document.getElementById('breaking_strength');
+        if (flexuralStrength >= 35) {
+            strengthInput.className = 'form-control border-success';
+        } else if (flexuralStrength >= 22) {
+            strengthInput.className = 'form-control border-warning';
+        } else {
+            strengthInput.className = 'form-control border-danger';
+        }
+    }
+}
+
+// Auto-calculate toggle
+document.getElementById('auto_calculate_strength').addEventListener('change', function() {
+    const strengthInput = document.getElementById('breaking_strength');
+    if (this.checked) {
+        strengthInput.readOnly = true;
+        strengthInput.placeholder = 'Calculé automatiquement';
+        calculateFlexuralStrength();
+    } else {
+        strengthInput.readOnly = false;
+        strengthInput.placeholder = 'Entrer manuellement';
+        strengthInput.className = 'form-control';
     }
 });
 
@@ -236,32 +444,59 @@ document.getElementById('manual_override').addEventListener('change', function()
     if (this.checked) {
         resultSelect.style.borderColor = '#ffc107';
         complianceInput.style.borderColor = '#ffc107';
+        complianceInput.readOnly = false;
+        complianceInput.placeholder = 'Entrer manuellement';
         resultSelect.parentElement.querySelector('.form-text').innerHTML = 
-            '<i class="fas fa-exclamation-triangle me-1 text-warning"></i>Mode manuel activé - évaluation automatique désactivée';
+            '<i class="fas fa-exclamation-triangle me-1 text-warning"></i>Mode manuel - évaluation automatique désactivée';
     } else {
         resultSelect.style.borderColor = '';
         complianceInput.style.borderColor = '';
+        complianceInput.readOnly = true;
+        complianceInput.placeholder = 'Calculé automatiquement';
         resultSelect.parentElement.querySelector('.form-text').innerHTML = 
-            '<i class="fas fa-magic me-1"></i>Détection automatique activée si normes ISO configurées';
+            '<i class="fas fa-magic me-1 text-success"></i>Évaluation automatique selon ISO 10545';
     }
 });
 
-// Add visual indicators for automatic vs manual mode
+// Initialize form
 document.addEventListener('DOMContentLoaded', function() {
+    // Set initial compliance input as readonly
+    document.getElementById('compliance_score').readOnly = true;
+    
+    // Add form validation feedback
     const form = document.getElementById('testForm');
     form.addEventListener('submit', function(e) {
+        const testType = document.getElementById('test_type').value;
         const manualOverride = document.getElementById('manual_override').checked;
-        if (!manualOverride) {
-            // Show a brief message about automatic evaluation
+        
+        if (!manualOverride && testType) {
+            // Show processing indicator
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-magic me-1"></i>Évaluation Automatique...';
+            submitBtn.innerHTML = '<i class="fas fa-cog fa-spin me-1"></i>Évaluation ISO en cours...';
             submitBtn.disabled = true;
             
+            // Re-enable after a short delay for user feedback
             setTimeout(() => {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
-            }, 1000);
+            }, 1500);
+        }
+    });
+    
+    // Add tooltips for ISO standards info
+    const tooltips = {
+        'dimensional': 'Vérifie la conformité dimensionnelle selon ISO 10545-2: longueur, largeur, épaisseur, rectitude, planéité',
+        'water_absorption': 'Détermine la classification du carreau selon ISO 10545-3 et ISO 13006',
+        'breaking_strength': 'Mesure la résistance mécanique selon ISO 10545-4 par essai de flexion 3 points',
+        'abrasion': 'Évalue la durabilité de surface selon ISO 10545-6/7 pour usage prévu'
+    };
+    
+    // Add title attributes for help
+    Object.keys(tooltips).forEach(testType => {
+        const option = document.querySelector(`option[value="${testType}"]`);
+        if (option) {
+            option.title = tooltips[testType];
         }
     });
 });

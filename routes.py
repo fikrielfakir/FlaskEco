@@ -193,11 +193,26 @@ def quality_index():
 @login_required
 def create_test():
     if request.method == 'POST':
+        # Generate sample ID automatically
+        today = datetime.now()
+        sample_prefix = f"SAMP{today.strftime('%Y%m%d')}"
+        last_sample = QualityTest.query.filter(QualityTest.sample_id.like(f"{sample_prefix}%")).order_by(QualityTest.id.desc()).first()
+        
+        if last_sample and last_sample.sample_id:
+            last_num = int(last_sample.sample_id[-3:])
+            sample_id = f"{sample_prefix}{str(last_num + 1).zfill(3)}"
+        else:
+            sample_id = f"{sample_prefix}001"
+        
         test = QualityTest(
             batch_id=int(request.form['batch_id']),
             test_type=request.form['test_type'],
             technician_id=current_user.id,
+            sample_id=sample_id,
             iso_standard=request.form['iso_standard'],
+            forming_method=request.form.get('forming_method', 'Pressed'),
+            surface_type=request.form.get('surface_type', 'glazed'),
+            temperature_humidity=request.form.get('temperature_humidity', ''),
             notes=request.form['notes']
         )
         
@@ -206,13 +221,30 @@ def create_test():
             test.length = float(request.form['length']) if request.form['length'] else None
             test.width = float(request.form['width']) if request.form['width'] else None
             test.thickness = float(request.form['thickness']) if request.form['thickness'] else None
+            test.straightness = float(request.form['straightness']) if request.form['straightness'] else None
+            test.flatness = float(request.form['flatness']) if request.form['flatness'] else None
+            test.rectangularity = float(request.form['rectangularity']) if request.form['rectangularity'] else None
             test.warping = float(request.form['warping']) if request.form['warping'] else None
+            
         elif request.form['test_type'] == 'water_absorption':
             test.water_absorption = float(request.form['water_absorption']) if request.form['water_absorption'] else None
+            
         elif request.form['test_type'] == 'breaking_strength':
-            test.breaking_strength = float(request.form['breaking_strength']) if request.form['breaking_strength'] else None
+            test.breaking_force = float(request.form['breaking_force']) if request.form['breaking_force'] else None
+            # Calculate flexural strength automatically if dimensions are available
+            if test.breaking_force and request.form.get('auto_calculate_strength') == 'on':
+                # Get dimensions from the form or previous tests
+                test.length = float(request.form['tile_length']) if request.form['tile_length'] else None
+                test.width = float(request.form['tile_width']) if request.form['tile_width'] else None  
+                test.thickness = float(request.form['tile_thickness']) if request.form['tile_thickness'] else None
+                test.calculate_flexural_strength()
+            else:
+                test.breaking_strength = float(request.form['breaking_strength']) if request.form['breaking_strength'] else None
+                
         elif request.form['test_type'] == 'abrasion':
             test.abrasion_resistance = request.form['abrasion_resistance']
+            test.abrasion_cycles = int(request.form['abrasion_cycles']) if request.form['abrasion_cycles'] else None
+            test.volume_loss = float(request.form['volume_loss']) if request.form['volume_loss'] else None
         
         test.visual_defects = request.form['visual_defects']
         
@@ -221,12 +253,14 @@ def create_test():
         if auto_result and not request.form.get('manual_override'):
             # Use automatic result
             test.result = auto_result
+            classification_info = f" | Classification: {test.tile_classification}" if test.tile_classification else ""
             ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
-                                   f'Test automatiquement évalué: {auto_result.upper()} (Score: {test.compliance_score:.1f}%)')
+                                   f'Test automatiquement évalué: {auto_result.upper()} (Score: {test.compliance_score:.1f}%){classification_info}')
         else:
             # Use manual result if auto-detection failed or manual override requested
             test.compliance_score = float(request.form['compliance_score']) if request.form['compliance_score'] else None
             test.result = request.form['result']
+            test.tile_classification = request.form.get('tile_classification', '')
             ActivityLog.log_activity('created', 'quality_test', test.id, f"{test.test_type} test", 
                                    f'Test manuellement évalué: {test.result.upper()}')
         
@@ -234,11 +268,19 @@ def create_test():
         db.session.commit()
         
         result_text = 'Conforme (Pass)' if test.result == 'pass' else 'Non Conforme (Fail)'
-        flash(f'Test de qualité créé avec succès! Résultat: {result_text}', 'success' if test.result == 'pass' else 'warning')
+        classification_text = f" - Classification: {test.tile_classification}" if test.tile_classification else ""
+        flash(f'Test de qualité créé avec succès! Échantillon: {sample_id} | Résultat: {result_text}{classification_text}', 
+              'success' if test.result == 'pass' else 'warning')
         return redirect(url_for('quality_index'))
     
     batches = ProductionBatch.query.filter_by(status='completed').all()
-    return render_template('quality/create_test.html', batches=batches)
+    iso_standards = {
+        'dimensional': 'ISO 10545-2',
+        'water_absorption': 'ISO 10545-3', 
+        'breaking_strength': 'ISO 10545-4',
+        'abrasion': 'ISO 10545-6'
+    }
+    return render_template('quality/create_test.html', batches=batches, iso_standards=iso_standards)
 
 @app.route('/quality/<int:test_id>')
 @login_required
@@ -531,6 +573,139 @@ def generate_quality_pdf_report(tests):
         download_name=f'rapport_qualite_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf',
         mimetype='application/pdf'
     )
+
+@app.route('/quality/initialize-iso-standards', methods=['POST'])
+@login_required
+def initialize_iso_standards():
+    """Initialize ISO 10545 and NM ISO 13006 standards"""
+    default_standards = [
+        # ISO 10545-2: Dimensional tests
+        {
+            'standard_code': 'ISO 10545-2',
+            'title': 'Détermination des dimensions et de la qualité de surface',
+            'category': 'length_tolerance',
+            'test_type': 'dimensional',
+            'min_threshold': -0.6,  # -0.6% for porcelain
+            'max_threshold': 0.6,   # +0.6% for porcelain
+            'unit': '%',
+            'description': 'Tolérance dimensionnelle pour carreaux en porcelaine (BIa): ±0.6% max 2.0mm'
+        },
+        {
+            'standard_code': 'ISO 10545-2',
+            'title': 'Détermination des dimensions et de la qualité de surface',
+            'category': 'thickness_tolerance',
+            'test_type': 'dimensional',
+            'min_threshold': -5.0,  # -5.0% for porcelain
+            'max_threshold': 5.0,   # +5.0% for porcelain
+            'unit': '%',
+            'description': 'Tolérance d\'épaisseur pour carreaux en porcelaine (BIa): ±5.0%'
+        },
+        {
+            'standard_code': 'ISO 10545-2',
+            'title': 'Détermination des dimensions et de la qualité de surface',
+            'category': 'straightness',
+            'test_type': 'dimensional',
+            'min_threshold': None,
+            'max_threshold': 0.5,   # max 0.5%
+            'unit': '%',
+            'description': 'Rectitude maximale pour carreaux en porcelaine: ±0.5%'
+        },
+        {
+            'standard_code': 'ISO 10545-2',
+            'title': 'Détermination des dimensions et de la qualité de surface',
+            'category': 'flatness',
+            'test_type': 'dimensional',
+            'min_threshold': None,
+            'max_threshold': 0.5,   # max 0.5%
+            'unit': '%',
+            'description': 'Planéité maximale pour carreaux en porcelaine: ±0.5%'
+        },
+        # ISO 10545-3: Water absorption
+        {
+            'standard_code': 'ISO 10545-3',
+            'title': 'Détermination de l\'absorption d\'eau',
+            'category': 'water_absorption',
+            'test_type': 'water_absorption',
+            'min_threshold': None,
+            'max_threshold': 0.5,   # ≤0.5% for porcelain (BIa)
+            'unit': '%',
+            'description': 'Absorption d\'eau pour carreaux en porcelaine (BIa): ≤0.5%'
+        },
+        {
+            'standard_code': 'ISO 10545-3',
+            'title': 'Détermination de l\'absorption d\'eau',
+            'category': 'water_absorption',
+            'test_type': 'water_absorption',
+            'min_threshold': None,
+            'max_threshold': 3.0,   # ≤3.0% for stoneware (BIIa)
+            'unit': '%',
+            'description': 'Absorption d\'eau pour carreaux en grès cérame (BIIa): 0.5% < E ≤ 3%'
+        },
+        # ISO 10545-4: Breaking strength
+        {
+            'standard_code': 'ISO 10545-4',
+            'title': 'Détermination de la résistance à la rupture et de la force de rupture',
+            'category': 'breaking_strength',
+            'test_type': 'breaking_strength',
+            'min_threshold': 35,    # ≥35 N/mm² for porcelain
+            'max_threshold': None,
+            'unit': 'N/mm²',
+            'description': 'Résistance à la flexion pour carreaux en porcelaine (BIa): ≥35 N/mm²'
+        },
+        {
+            'standard_code': 'ISO 10545-4',
+            'title': 'Détermination de la résistance à la rupture et de la force de rupture',
+            'category': 'breaking_force',
+            'test_type': 'breaking_strength',
+            'min_threshold': 1300,  # ≥1300 N for standard tiles
+            'max_threshold': None,
+            'unit': 'N',
+            'description': 'Force de rupture minimale pour carreaux: ≥1300 N'
+        },
+        # ISO 10545-6: Abrasion resistance for glazed tiles
+        {
+            'standard_code': 'ISO 10545-6',
+            'title': 'Détermination de la résistance à l\'abrasion profonde pour les carreaux non émaillés',
+            'category': 'abrasion',
+            'test_type': 'abrasion',
+            'min_threshold': None,
+            'max_threshold': None,
+            'unit': 'PEI Class',
+            'description': 'Classification PEI pour carreaux émaillés: PEI I à PEI V selon usage'
+        },
+        # NM ISO 13006: Moroccan national standard
+        {
+            'standard_code': 'NM ISO 13006',
+            'title': 'Carreaux et dalles céramiques - Définitions, classification, caractéristiques et marquage',
+            'category': 'classification',
+            'test_type': 'water_absorption',
+            'min_threshold': None,
+            'max_threshold': None,
+            'unit': 'Classification',
+            'description': 'Norme marocaine basée sur ISO 13006 v2016 pour classification et marquage'
+        }
+    ]
+    
+    created_count = 0
+    for std_data in default_standards:
+        # Check if standard already exists
+        existing = ISOStandard.query.filter_by(
+            standard_code=std_data['standard_code'],
+            category=std_data['category'],
+            test_type=std_data['test_type']
+        ).first()
+        
+        if not existing:
+            standard = ISOStandard(**std_data)
+            db.session.add(standard)
+            created_count += 1
+    
+    db.session.commit()
+    ActivityLog.log_activity('created', 'iso_standards', None, 'ISO 10545 series', 
+                           f'Initialized {created_count} ISO standards for ceramic tile testing')
+    
+    flash(f'{created_count} normes ISO 10545 et NM ISO 13006 initialisées avec succès!', 'success')
+    return redirect(url_for('quality_index'))
 
 def generate_single_test_pdf_report(test):
     """Generate professional PDF report for a single quality test"""

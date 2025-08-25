@@ -48,34 +48,157 @@ class QualityTest(db.Model):
     test_type = db.Column(db.String(50), nullable=False)  # dimensional, water_absorption, breaking_strength, abrasion
     test_date = db.Column(db.DateTime, default=datetime.utcnow)
     technician_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sample_id = db.Column(db.String(50))  # Sample identification code
     
-    # Dimensional measurements
-    length = db.Column(db.Float)
-    width = db.Column(db.Float)
-    thickness = db.Column(db.Float)
-    warping = db.Column(db.Float)
+    # Dimensional measurements (ISO 10545-2)
+    length = db.Column(db.Float)  # mm
+    width = db.Column(db.Float)   # mm
+    thickness = db.Column(db.Float)  # mm
+    straightness = db.Column(db.Float)  # mm deviation
+    flatness = db.Column(db.Float)      # mm deviation
+    rectangularity = db.Column(db.Float)  # mm deviation
+    warping = db.Column(db.Float)  # % or mm
     
-    # Physical properties
-    water_absorption = db.Column(db.Float)
-    breaking_strength = db.Column(db.Float)
-    abrasion_resistance = db.Column(db.String(10))  # PEI class
+    # Water absorption (ISO 10545-3)
+    water_absorption = db.Column(db.Float)  # %
+    
+    # Breaking strength / Flexural resistance (ISO 10545-4)
+    breaking_force = db.Column(db.Float)    # N (Newtons)
+    breaking_strength = db.Column(db.Float) # N/mm² (calculated flexural strength)
+    
+    # Abrasion resistance (ISO 10545-6/7)
+    abrasion_resistance = db.Column(db.String(10))  # PEI class I-V
+    abrasion_cycles = db.Column(db.Integer)  # test cycles completed
+    volume_loss = db.Column(db.Float)  # mm³ for unglazed tiles
     
     # Visual inspection
     visual_defects = db.Column(db.Text)
     
-    # ISO compliance
-    iso_standard = db.Column(db.String(20))  # ISO 13006, ISO 10545-3, etc.
+    # ISO compliance and classification
+    iso_standard = db.Column(db.String(30))  # ISO 10545-2, ISO 10545-3, etc.
+    tile_classification = db.Column(db.String(20))  # BIa, BIIa, BIII, etc.
+    absorption_group = db.Column(db.String(5))  # A, B, C
+    forming_method = db.Column(db.String(10))   # Pressed (B), Extruded (A)
+    surface_type = db.Column(db.String(10))     # glazed, unglazed
     compliance_score = db.Column(db.Float)
     result = db.Column(db.String(10))  # pass, fail
     
+    # Test conditions
+    temperature_humidity = db.Column(db.String(50))  # Environmental conditions
     notes = db.Column(db.Text)
     equipment_calibration_date = db.Column(db.Date)
 
     batch = db.relationship('ProductionBatch', backref='quality_tests')
     technician = db.relationship('User', backref='conducted_tests')
 
+    def calculate_flexural_strength(self):
+        """Calculate flexural strength from breaking force (ISO 10545-4)"""
+        if self.breaking_force and self.length and self.width and self.thickness:
+            # Flexural strength = (3 * F * L) / (2 * b * h²)
+            # F = breaking force (N), L = span length (typically 20mm less than tile length)
+            # b = width (mm), h = thickness (mm)
+            span_length = max(self.length - 20, self.length * 0.9)  # 90% of length minimum
+            self.breaking_strength = (3 * self.breaking_force * span_length) / (2 * self.width * (self.thickness ** 2))
+            return self.breaking_strength
+        return None
+    
+    def determine_tile_classification(self):
+        """Determine tile classification based on ISO 13006 / NM ISO 13006"""
+        if not self.water_absorption:
+            return None
+            
+        # Determine absorption group based on water absorption percentage
+        if self.water_absorption <= 0.5:
+            self.absorption_group = "A"  # Low absorption
+            if self.forming_method == "Pressed":
+                self.tile_classification = "BIa"  # Porcelain
+            else:
+                self.tile_classification = "AIa"
+        elif 0.5 < self.water_absorption <= 3.0:
+            self.absorption_group = "B"  # Medium absorption  
+            if self.forming_method == "Pressed":
+                self.tile_classification = "BIIa"  # Stoneware
+            else:
+                self.tile_classification = "AIIa"
+        elif 3.0 < self.water_absorption <= 6.0:
+            self.absorption_group = "B"
+            if self.forming_method == "Pressed":
+                self.tile_classification = "BIIb"
+            else:
+                self.tile_classification = "AIIb"
+        elif 6.0 < self.water_absorption <= 10.0:
+            self.absorption_group = "B"
+            if self.forming_method == "Pressed":
+                self.tile_classification = "BIIc"
+            else:
+                self.tile_classification = "AIIc"
+        else:  # > 10%
+            self.absorption_group = "C"  # High absorption
+            if self.forming_method == "Pressed":
+                self.tile_classification = "BIII"  # Earthenware
+            else:
+                self.tile_classification = "AIII"
+        
+        return self.tile_classification
+    
+    def check_dimensional_tolerances(self, product_type=None):
+        """Check dimensional tolerances according to ISO 10545-2"""
+        tolerances = {}
+        
+        # Get product type tolerances or use defaults for porcelain (BIa)
+        if self.tile_classification == "BIa" or not self.tile_classification:
+            # Porcelain tolerances (stricter)
+            length_tolerance_pct = 0.6  # ±0.6%
+            thickness_tolerance_pct = 5.0  # ±5.0%
+            max_deviation_mm = 2.0  # max 2.0mm
+            straightness_limit = 0.5  # ±0.5%
+            flatness_limit = 0.5    # ±0.5%
+        else:
+            # Standard ceramic tolerances
+            length_tolerance_pct = 1.0  # ±1.0%
+            thickness_tolerance_pct = 10.0  # ±10.0%
+            max_deviation_mm = 3.0  # max 3.0mm
+            straightness_limit = 1.0  # ±1.0%
+            flatness_limit = 1.0    # ±1.0%
+        
+        # Check length tolerance
+        if self.length:
+            length_tolerance = min((self.length * length_tolerance_pct / 100), max_deviation_mm)
+            tolerances['length'] = abs(self.length - (self.length)) <= length_tolerance  # Compare to nominal
+            
+        # Check width tolerance  
+        if self.width:
+            width_tolerance = min((self.width * length_tolerance_pct / 100), max_deviation_mm)
+            tolerances['width'] = abs(self.width - (self.width)) <= width_tolerance  # Compare to nominal
+            
+        # Check thickness tolerance
+        if self.thickness:
+            thickness_tolerance = self.thickness * thickness_tolerance_pct / 100
+            tolerances['thickness'] = abs(self.thickness - (self.thickness)) <= thickness_tolerance  # Compare to nominal
+            
+        # Check straightness
+        if self.straightness:
+            straightness_tolerance = self.length * straightness_limit / 100 if self.length else 0.5
+            tolerances['straightness'] = self.straightness <= straightness_tolerance
+            
+        # Check flatness  
+        if self.flatness:
+            flatness_tolerance = self.length * flatness_limit / 100 if self.length else 0.5
+            tolerances['flatness'] = self.flatness <= flatness_tolerance
+            
+        return tolerances
+        
     def determine_result_automatically(self):
-        """Automatically determine if test passes or fails based on ISO standards"""
+        """Automatically determine if test passes or fails based on ISO 10545 standards"""
+        # Calculate flexural strength if breaking force is provided
+        if self.test_type == 'breaking_strength' and self.breaking_force:
+            self.calculate_flexural_strength()
+        
+        # Determine tile classification
+        if self.test_type == 'water_absorption' and self.water_absorption is not None:
+            self.determine_tile_classification()
+        
+        # Check against ISO standards
         iso_standards = ISOStandard.query.filter_by(
             standard_code=self.iso_standard, 
             is_active=True
@@ -86,37 +209,56 @@ class QualityTest(db.Model):
         
         failed_tests = 0
         total_tests = 0
+        passed_tests = []
+        failed_tests_details = []
         
         for standard in iso_standards:
             if self.test_type == 'dimensional':
-                if standard.category == 'length' and self.length is not None:
+                # Check dimensional tolerances
+                tolerances = self.check_dimensional_tolerances()
+                for param, passes in tolerances.items():
                     total_tests += 1
-                    if not (standard.min_threshold <= self.length <= standard.max_threshold):
+                    if passes:
+                        passed_tests.append(param)
+                    else:
                         failed_tests += 1
-                elif standard.category == 'width' and self.width is not None:
-                    total_tests += 1
-                    if not (standard.min_threshold <= self.width <= standard.max_threshold):
-                        failed_tests += 1
-                elif standard.category == 'thickness' and self.thickness is not None:
-                    total_tests += 1
-                    if not (standard.min_threshold <= self.thickness <= standard.max_threshold):
-                        failed_tests += 1
-                elif standard.category == 'warping' and self.warping is not None:
-                    total_tests += 1
-                    if self.warping > standard.max_threshold:
-                        failed_tests += 1
-            
+                        failed_tests_details.append(param)
+                        
             elif self.test_type == 'water_absorption' and standard.category == 'water_absorption':
                 if self.water_absorption is not None:
                     total_tests += 1
-                    if self.water_absorption > standard.max_threshold:
+                    # Check based on tile classification requirements
+                    if self.tile_classification == "BIa" and self.water_absorption <= 0.5:
+                        passed_tests.append('water_absorption')
+                    elif self.tile_classification in ["BIIa", "BIIb"] and self.water_absorption <= 3.0:
+                        passed_tests.append('water_absorption')
+                    elif self.water_absorption <= standard.max_threshold:
+                        passed_tests.append('water_absorption')
+                    else:
                         failed_tests += 1
+                        failed_tests_details.append('water_absorption')
             
             elif self.test_type == 'breaking_strength' and standard.category == 'breaking_strength':
                 if self.breaking_strength is not None:
                     total_tests += 1
-                    if self.breaking_strength < standard.min_threshold:
+                    # Porcelain requires ≥35 N/mm², others ≥22 N/mm²
+                    min_strength = 35 if self.tile_classification == "BIa" else 22
+                    if self.breaking_strength >= min_strength:
+                        passed_tests.append('breaking_strength')
+                    else:
                         failed_tests += 1
+                        failed_tests_details.append('breaking_strength')
+                        
+            elif self.test_type == 'abrasion' and standard.category == 'abrasion':
+                if self.abrasion_resistance:
+                    total_tests += 1
+                    # PEI classification validation
+                    pei_classes = ['PEI 0', 'PEI I', 'PEI II', 'PEI III', 'PEI IV', 'PEI V']
+                    if self.abrasion_resistance in pei_classes:
+                        passed_tests.append('abrasion')
+                    else:
+                        failed_tests += 1
+                        failed_tests_details.append('abrasion')
         
         if total_tests == 0:
             return None  # No applicable tests

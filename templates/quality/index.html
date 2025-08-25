@@ -20,6 +20,13 @@
                     </a></li>
                 </ul>
             </div>
+            <div class="btn-group me-2" role="group">
+                <form action="{{ url_for('initialize_iso_standards') }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-outline-info">
+                        <i class="fas fa-cog me-2"></i>Initialiser ISO 10545
+                    </button>
+                </form>
+            </div>
             <a href="{{ url_for('create_test') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-2"></i>Nouveau Test
             </a>
@@ -69,9 +76,11 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
+                                <th>Échantillon</th>
                                 <th>Lot</th>
                                 <th>Type de Test</th>
                                 <th>Norme ISO</th>
+                                <th>Classification</th>
                                 <th>Technicien</th>
                                 <th>Score</th>
                                 <th>Résultat</th>
@@ -83,6 +92,9 @@
                                 <tr>
                                     <td>{{ test.test_date.strftime('%d/%m/%Y') }}</td>
                                     <td>
+                                        <span class="badge bg-info">{{ test.sample_id or 'N/A' }}</span>
+                                    </td>
+                                    <td>
                                         <a href="{{ url_for('view_batch', batch_id=test.batch.id) }}" class="text-decoration-none">
                                             {{ test.batch.lot_number }}
                                         </a>
@@ -91,6 +103,15 @@
                                         <span class="badge bg-secondary">{{ test.test_type }}</span>
                                     </td>
                                     <td>{{ test.iso_standard or '-' }}</td>
+                                    <td>
+                                        {% if test.tile_classification %}
+                                            <span class="badge bg-{% if test.tile_classification == 'BIa' %}success{% elif test.tile_classification in ['BIIa', 'BIIb'] %}warning{% else %}secondary{% endif %}">
+                                                {{ test.tile_classification }}
+                                            </span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
                                     <td>{{ test.technician.username }}</td>
                                     <td>
                                         {% if test.compliance_score %}
@@ -101,7 +122,11 @@
                                     </td>
                                     <td>
                                         <span class="badge bg-{% if test.result == 'pass' %}success{% else %}danger{% endif %}">
-                                            {{ test.result }}
+                                            {% if test.result == 'pass' %}
+                                                Conforme
+                                            {% else %}
+                                                Non Conforme
+                                            {% endif %}
                                         </span>
                                     </td>
                                     <td>

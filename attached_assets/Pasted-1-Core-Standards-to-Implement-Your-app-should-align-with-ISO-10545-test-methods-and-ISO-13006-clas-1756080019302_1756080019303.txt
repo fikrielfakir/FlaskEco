@@ -1,0 +1,117 @@
+1. Core Standards to Implement
+
+Your app should align with ISO 10545 test methods and ISO 13006 classification.
+
+Test Type	ISO Standard	What It Measures	Relevance
+Dimensional Check	ISO 10545-2	Length, width, thickness, straightness, flatness, rectangularity	Ensures tile size & shape uniformity
+Water Absorption	ISO 10545-3	% water absorbed (porosity)	Classifies tiles (porcelain <0.5%, stoneware, earthenware, etc.)
+Breaking Strength / Flexural Resistance	ISO 10545-4	Resistance to rupture under 3-point bending	Guarantees mechanical strength
+Abrasion Resistance	ISO 10545-6 / 7	Surface wear (glazed tiles), volume loss (unglazed)	Durability & surface lifetime
+
+⚠️ NM ISO 13006 (Morocco): This national standard uses ISO 10545 tests as references and specifies classification + marking rules.
+
+2. Tile Classification (ISO 13006 / NM ISO 13006)
+
+Tiles are classified by:
+
+Water absorption groups (A, B, C)
+
+Group BIa: Porcelain (≤0.5% absorption)
+
+Group BIIa: Stoneware (0.5%–3%)
+
+Group BIII: Earthenware (>10%)
+
+Forming method: Pressed (B) or Extruded (A)
+
+Glazed or Unglazed
+
+👉 Example: BIa, glazed = Porcelain glazed floor tile.
+
+3. What Your App Should Handle
+
+A Quality Control App for Ceramic Tiles can include modules like:
+
+🔹 1. Sample Management
+
+Register batch, production line, operator
+
+Assign sample IDs
+
+Track production date & lot number
+
+🔹 2. Test Execution
+
+For each sample:
+
+Input dimensional measurements (mm, tolerances auto-checked)
+
+Record water absorption test results (% value)
+
+Input rupture test force (calculate flexural strength automatically)
+
+Record abrasion class (ISO test cycles / volume loss)
+
+🔹 3. Automatic Calculations
+
+Auto-check against ISO tolerances
+
+Assign tile classification (e.g., BIa, BIIb, BIII)
+
+Pass/Fail decision
+
+🔹 4. Reporting & Analytics
+
+Export results (PDF / Excel)
+
+Generate batch conformity certificates
+
+Track defect trends by line, date, material supplier
+
+🔹 5. Integration
+
+Barcode / QR Code for each batch
+
+Possible IoT sensor input (digital calipers, load cells)
+
+Dashboard with KPIs: rejection rate, avg absorption, avg strength
+
+4. Typical Test Parameters (Example Values)
+
+Here are some tolerances from ISO 10545 & ISO 13006 that your app can integrate:
+
+Property	Typical Requirement (Porcelain – BIa)
+Length/Width Tolerance	±0.6% (max 2.0 mm)
+Thickness Tolerance	±5.0%
+Straightness / Flatness	±0.5%
+Water Absorption	≤ 0.5%
+Breaking Strength	≥ 1300 N
+Flexural Strength	≥ 35 N/mm²
+Abrasion Resistance	Class PEI I–V (glazed)
+5. User Workflow Example in App
+
+Operator scans batch code
+
+App prompts: “Enter 10 sample measurements for length”
+
+App auto-calculates average, min, max, tolerance compliance
+
+App asks for water absorption data → computes %
+
+App asks for rupture test data → calculates flexural strength
+
+App outputs: Conform / Non-Conform
+
+Generate PDF report + store in database
+
+6. Bonus Features for Morocco
+
+Since you’re working in a ceramic production company in Morocco 🇲🇦:
+
+Multi-language (Arabic / French / English)
+
+Integration with NM ISO 13006 v2016 (marking, labeling rules)
+
+Localized units (mm, N, MPa, %)
+
+Export-ready certificates for clients & auditors
