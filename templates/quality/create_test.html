@@ -43,6 +43,10 @@
                                             <option value="water_absorption">ISO 10545-3: Absorption d'eau</option>
                                             <option value="breaking_strength">ISO 10545-4: Résistance à la rupture</option>
                                             <option value="abrasion">ISO 10545-6/7: Résistance à l'abrasion</option>
+                            <option value="clay_testing">R2-MA-LABO-01: Tests Argile (PDM)</option>
+                            <option value="thermal_shock">R2-MA-LABO-04: Choc thermique</option>
+                            <option value="glaze_testing">R2-MA-LABO-05: Tests émaux</option>
+                            <option value="cetemco_testing">ISO 10545-9/11/13/14: Tests CETEMCO</option>
                                         </select>
                                     </div>
                                 </div>
@@ -238,6 +242,173 @@
                                         <input type="number" class="form-control" id="volume_loss" name="volume_loss" 
                                                step="0.1" placeholder="ex: 125" min="0">
                                         <div class="form-text">Pour carreaux non émaillés</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Clay Testing Fields (R2-MA-LABO-01) -->
+                        <div id="clay_testing_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-seedling me-2"></i>R2-MA-LABO-01: Tests Argile (Préparation des Matières)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-success">
+                                    <strong>Spécifications Argile:</strong> 
+                                    Trémie: 2.5-4.1% | Tamisage: 2-3.5% | Silo: 5.3-6.3% | Presse: 5.2-6% | CaCO3: 15-25% | Granulométrie: 10-20%
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <label for="clay_humidity_hopper" class="form-label">Humidité Trémie (%)</label>
+                                        <input type="number" class="form-control" id="clay_humidity_hopper" name="clay_humidity_hopper" 
+                                               step="0.1" min="0" max="10" placeholder="3.5">
+                                        <div class="form-text">2.5% ≤ H ≤ 4.1%</div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="clay_humidity_sieved" class="form-label">Humidité Tamisage (%)</label>
+                                        <input type="number" class="form-control" id="clay_humidity_sieved" name="clay_humidity_sieved" 
+                                               step="0.1" min="0" max="10" placeholder="2.8">
+                                        <div class="form-text">2% ≤ H ≤ 3.5%</div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="clay_humidity_silo" class="form-label">Humidité Silo (%)</label>
+                                        <input type="number" class="form-control" id="clay_humidity_silo" name="clay_humidity_silo" 
+                                               step="0.1" min="0" max="10" placeholder="5.8">
+                                        <div class="form-text">5.3% ≤ H ≤ 6.3%</div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label for="clay_humidity_press" class="form-label">Humidité Presse (%)</label>
+                                        <input type="number" class="form-control" id="clay_humidity_press" name="clay_humidity_press" 
+                                               step="0.1" min="0" max="10" placeholder="5.6">
+                                        <div class="form-text">5.2% ≤ H ≤ 6%</div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="clay_granulometry_refusal" class="form-label">Granulométrie CaCO3 (%)</label>
+                                        <input type="number" class="form-control" id="clay_granulometry_refusal" name="clay_granulometry_refusal" 
+                                               step="0.1" min="0" max="100" placeholder="15">
+                                        <div class="form-text">10% ≤ Refus ≤ 20%</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="clay_carbonate_content" class="form-label">Teneur CaCO3 (%)</label>
+                                        <input type="number" class="form-control" id="clay_carbonate_content" name="clay_carbonate_content" 
+                                               step="0.1" min="0" max="100" placeholder="20">
+                                        <div class="form-text">15% ≤ CaCO3 ≤ 25%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Thermal Shock Testing Fields (R2-MA-LABO-04) -->
+                        <div id="thermal_shock_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-danger text-white">
+                                <h6 class="mb-0"><i class="fas fa-thermometer-full me-2"></i>R2-MA-LABO-04: Tests Choc Thermique</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-danger">
+                                    <strong>Critères Four Biscuit:</strong> 
+                                    Retrait/Dilatation: -0.2% à +0.4% | Perte au feu: 10-19% | Absence fissures thermiques
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="thermal_shock_resistance" name="thermal_shock_resistance">
+                                            <label class="form-check-label" for="thermal_shock_resistance">
+                                                Résistance Choc Thermique
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Absence de fissures non visibles</div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="shrinkage_expansion" class="form-label">Retrait/Dilatation (%)</label>
+                                        <input type="number" class="form-control" id="shrinkage_expansion" name="shrinkage_expansion" 
+                                               step="0.01" min="-5" max="5" placeholder="0.1">
+                                        <div class="form-text">-0.2% à +0.4%</div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="loss_on_ignition" class="form-label">Perte au Feu (%)</label>
+                                        <input type="number" class="form-control" id="loss_on_ignition" name="loss_on_ignition" 
+                                               step="0.1" min="0" max="50" placeholder="14.5">
+                                        <div class="form-text">10% - 19%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Glaze Testing Fields (R2-MA-LABO-05) -->
+                        <div id="glaze_testing_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-paint-brush me-2"></i>R2-MA-LABO-05: Tests Émaux et PDE</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <strong>Spécifications Émaux:</strong> 
+                                    Densité Engobe: 1780-1830 g/l | Email: 1730-1780 g/l | Viscosité: 25-55 sec | Refus: 0.1-5 ml
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="glaze_density" class="form-label">Densité Émail (g/l)</label>
+                                        <input type="number" class="form-control" id="glaze_density" name="glaze_density" 
+                                               step="1" min="1000" max="2000" placeholder="1755">
+                                        <div class="form-text">1730-1780 g/l (Email)</div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="glaze_viscosity" class="form-label">Viscosité (sec)</label>
+                                        <input type="number" class="form-control" id="glaze_viscosity" name="glaze_viscosity" 
+                                               step="1" min="0" max="100" placeholder="40">
+                                        <div class="form-text">25-55 secondes</div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="glaze_refusal" class="form-label">Refus Tamis 45µ (ml)</label>
+                                        <input type="number" class="form-control" id="glaze_refusal" name="glaze_refusal" 
+                                               step="0.1" min="0" max="10" placeholder="4">
+                                        <div class="form-text">3-5 ml (Email)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- CETEMCO Testing Fields (ISO 10545-9/11/13/14) -->
+                        <div id="cetemco_testing_fields" class="test-fields card mb-4" style="display: none;">
+                            <div class="card-header bg-dark text-white">
+                                <h6 class="mb-0"><i class="fas fa-certificate me-2"></i>ISO 10545-9/11/13/14: Tests CETEMCO</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-dark">
+                                    <strong>Tests Avancés CETEMCO:</strong> 
+                                    Résistance thermique, chimique, aux taches selon normes ISO spécialisées
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="thermal_resistance" class="form-label">Résistance Thermique</label>
+                                        <select class="form-select" id="thermal_resistance" name="thermal_resistance">
+                                            <option value="">En attente</option>
+                                            <option value="Conforme">Conforme</option>
+                                            <option value="Non Conforme">Non Conforme</option>
+                                            <option value="En cours">Test en cours</option>
+                                        </select>
+                                        <div class="form-text">ISO 10545-9</div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="chemical_resistance" class="form-label">Résistance Chimique</label>
+                                        <select class="form-select" id="chemical_resistance" name="chemical_resistance">
+                                            <option value="">En attente</option>
+                                            <option value="Conforme">Conforme</option>
+                                            <option value="Non Conforme">Non Conforme</option>
+                                            <option value="En cours">Test en cours</option>
+                                        </select>
+                                        <div class="form-text">ISO 10545-13</div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="stain_resistance" class="form-label">Résistance aux Taches</label>
+                                        <select class="form-select" id="stain_resistance" name="stain_resistance">
+                                            <option value="">En attente</option>
+                                            <option value="Conforme">Conforme</option>
+                                            <option value="Non Conforme">Non Conforme</option>
+                                            <option value="En cours">Test en cours</option>
+                                        </select>
+                                        <div class="form-text">ISO 10545-14</div>
                                     </div>
                                 </div>
                             </div>

@@ -101,17 +101,16 @@ def create_batch():
         else:
             lot_number = f"{lot_prefix}001"
         
-        batch = ProductionBatch(
-            lot_number=lot_number,
-            product_type=request.form['product_type'],
-            planned_quantity=int(request.form['planned_quantity']),
-            production_date=datetime.strptime(request.form['production_date'], '%Y-%m-%d').date(),
-            kiln_number=request.form['kiln_number'],
-            kiln_temperature=float(request.form['kiln_temperature']) if request.form['kiln_temperature'] else None,
-            firing_duration=float(request.form['firing_duration']) if request.form['firing_duration'] else None,
-            supervisor_id=current_user.id,
-            notes=request.form['notes']
-        )
+        batch = ProductionBatch()
+        batch.lot_number = lot_number
+        batch.product_type = request.form['product_type']
+        batch.planned_quantity = int(request.form['planned_quantity'])
+        batch.production_date = datetime.strptime(request.form['production_date'], '%Y-%m-%d').date()
+        batch.kiln_number = request.form['kiln_number']
+        batch.kiln_temperature = float(request.form['kiln_temperature']) if request.form['kiln_temperature'] else None
+        batch.firing_duration = float(request.form['firing_duration']) if request.form['firing_duration'] else None
+        batch.supervisor_id = current_user.id
+        batch.notes = request.form['notes']
         
         db.session.add(batch)
         db.session.commit()
@@ -204,17 +203,16 @@ def create_test():
         else:
             sample_id = f"{sample_prefix}001"
         
-        test = QualityTest(
-            batch_id=int(request.form['batch_id']),
-            test_type=request.form['test_type'],
-            technician_id=current_user.id,
-            sample_id=sample_id,
-            iso_standard=request.form['iso_standard'],
-            forming_method=request.form.get('forming_method', 'Pressed'),
-            surface_type=request.form.get('surface_type', 'glazed'),
-            temperature_humidity=request.form.get('temperature_humidity', ''),
-            notes=request.form['notes']
-        )
+        test = QualityTest()
+        test.batch_id = int(request.form['batch_id'])
+        test.test_type = request.form['test_type']
+        test.technician_id = current_user.id
+        test.sample_id = sample_id
+        test.iso_standard = request.form['iso_standard']
+        test.forming_method = request.form.get('forming_method', 'Pressed')
+        test.surface_type = request.form.get('surface_type', 'glazed')
+        test.temperature_humidity = request.form.get('temperature_humidity', '')
+        test.notes = request.form['notes']
         
         # Set measurements based on test type
         if request.form['test_type'] == 'dimensional':
@@ -245,6 +243,31 @@ def create_test():
             test.abrasion_resistance = request.form['abrasion_resistance']
             test.abrasion_cycles = int(request.form['abrasion_cycles']) if request.form['abrasion_cycles'] else None
             test.volume_loss = float(request.form['volume_loss']) if request.form['volume_loss'] else None
+            
+        elif request.form['test_type'] == 'clay_testing':
+            # Clay humidity tests at different stages
+            test.clay_humidity_hopper = float(request.form['clay_humidity_hopper']) if request.form['clay_humidity_hopper'] else None
+            test.clay_humidity_sieved = float(request.form['clay_humidity_sieved']) if request.form['clay_humidity_sieved'] else None
+            test.clay_humidity_silo = float(request.form['clay_humidity_silo']) if request.form['clay_humidity_silo'] else None
+            test.clay_humidity_press = float(request.form['clay_humidity_press']) if request.form['clay_humidity_press'] else None
+            # Granulometry and carbonate testing
+            test.clay_granulometry_refusal = float(request.form['clay_granulometry_refusal']) if request.form['clay_granulometry_refusal'] else None
+            test.clay_carbonate_content = float(request.form['clay_carbonate_content']) if request.form['clay_carbonate_content'] else None
+            
+        elif request.form['test_type'] == 'thermal_shock':
+            test.thermal_shock_resistance = request.form.get('thermal_shock_resistance') == 'on'
+            test.shrinkage_expansion = float(request.form['shrinkage_expansion']) if request.form['shrinkage_expansion'] else None
+            test.loss_on_ignition = float(request.form['loss_on_ignition']) if request.form['loss_on_ignition'] else None
+            
+        elif request.form['test_type'] == 'glaze_testing':
+            test.glaze_density = float(request.form['glaze_density']) if request.form['glaze_density'] else None
+            test.glaze_viscosity = float(request.form['glaze_viscosity']) if request.form['glaze_viscosity'] else None
+            test.glaze_refusal = float(request.form['glaze_refusal']) if request.form['glaze_refusal'] else None
+            
+        elif request.form['test_type'] == 'cetemco_testing':
+            test.thermal_resistance = request.form.get('thermal_resistance', '')
+            test.chemical_resistance = request.form.get('chemical_resistance', '')
+            test.stain_resistance = request.form.get('stain_resistance', '')
         
         test.visual_defects = request.form['visual_defects']
         
@@ -278,7 +301,11 @@ def create_test():
         'dimensional': 'ISO 10545-2',
         'water_absorption': 'ISO 10545-3', 
         'breaking_strength': 'ISO 10545-4',
-        'abrasion': 'ISO 10545-6'
+        'abrasion': 'ISO 10545-6',
+        'clay_testing': 'R2-MA-LABO-01',
+        'thermal_shock': 'R2-MA-LABO-04',
+        'glaze_testing': 'R2-MA-LABO-05',
+        'cetemco_testing': 'ISO 10545-9/11/13/14'
     }
     return render_template('quality/create_test.html', batches=batches, iso_standards=iso_standards)
 

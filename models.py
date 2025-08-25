@@ -45,7 +45,7 @@ class ProductionBatch(db.Model):
 class QualityTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('production_batch.id'), nullable=False)
-    test_type = db.Column(db.String(50), nullable=False)  # dimensional, water_absorption, breaking_strength, abrasion
+    test_type = db.Column(db.String(50), nullable=False)  # dimensional, water_absorption, breaking_strength, abrasion, clay_testing, thermal_shock, glaze_testing, cetemco_testing
     test_date = db.Column(db.DateTime, default=datetime.utcnow)
     technician_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     sample_id = db.Column(db.String(50))  # Sample identification code
@@ -70,6 +70,29 @@ class QualityTest(db.Model):
     abrasion_resistance = db.Column(db.String(10))  # PEI class I-V
     abrasion_cycles = db.Column(db.Integer)  # test cycles completed
     volume_loss = db.Column(db.Float)  # mm³ for unglazed tiles
+    
+    # Clay testing (Argile) - Raw material quality control
+    clay_humidity_hopper = db.Column(db.Float)  # % humidity in general hopper (2.5-4.1%)
+    clay_humidity_sieved = db.Column(db.Float)  # % humidity after sieving (2-3.5%)
+    clay_humidity_silo = db.Column(db.Float)  # % humidity in silo (5.3-6.3%)
+    clay_humidity_press = db.Column(db.Float)  # % humidity at press (5.2-6%)
+    clay_granulometry_refusal = db.Column(db.Float)  # % refusal CaCO3 granulometry (10-20%)
+    clay_carbonate_content = db.Column(db.Float)  # % CaCO3 content (15-25%)
+    
+    # Additional ceramic testing fields
+    thermal_shock_resistance = db.Column(db.Boolean)  # Pass/fail for thermal shock
+    shrinkage_expansion = db.Column(db.Float)  # % shrinkage/expansion (-0.2 to +0.4%)
+    loss_on_ignition = db.Column(db.Float)  # % loss on fire (10-19%)
+    
+    # Glaze testing (for Four Email/Glaze kiln)
+    glaze_density = db.Column(db.Float)  # g/l glaze density
+    glaze_viscosity = db.Column(db.Float)  # seconds viscosity
+    glaze_refusal = db.Column(db.Float)  # ml refusal at 45µ sieve
+    
+    # CETEMCO testing (ISO 10545-9, -11, -13, -14)
+    thermal_resistance = db.Column(db.String(20))  # CETEMCO thermal resistance result
+    chemical_resistance = db.Column(db.String(20))  # CETEMCO chemical resistance result
+    stain_resistance = db.Column(db.String(20))  # CETEMCO stain resistance result
     
     # Visual inspection
     visual_defects = db.Column(db.Text)
@@ -423,15 +446,14 @@ class ActivityLog(db.Model):
             user = current_user if current_user.is_authenticated else None
         
         if user:
-            log = ActivityLog(
-                user_id=user.id,
-                action=action,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                entity_name=entity_name,
-                details=details,
-                ip_address=request.remote_addr if request else None,
-                user_agent=request.headers.get('User-Agent') if request else None
-            )
+            log = ActivityLog()
+            log.user_id = user.id
+            log.action = action
+            log.entity_type = entity_type
+            log.entity_id = entity_id
+            log.entity_name = entity_name
+            log.details = details
+            log.ip_address = request.remote_addr if request else None
+            log.user_agent = request.headers.get('User-Agent') if request else None
             db.session.add(log)
             db.session.commit()
